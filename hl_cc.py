@@ -14,6 +14,7 @@ import numpy as np
 import datetime
 import pandas as pd
 import os
+import getpass
 
 # Adjust fontsize/weight
 font = {'family' : 'normal',
@@ -21,20 +22,29 @@ font = {'family' : 'normal',
         'size'   : 18}
 plt.rc('font', **font)
 
+# Check user's path
+if getpass.getuser() == 'cyrf0006':
+    files_path = '~/data/Headlands_Trimmed/'
+else:
+    files_path = '~/Desktop'
 # Generate the list
 infiles = 'comfortcove.list'
-os.system('ls ~/Desktop/ComfortCove/*.rpf > ' + infiles)
+os.system('ls ' + os.path.join(files_path, 'ComfortCove/*.rpf') + ' > ' + infiles)
 filelist = np.genfromtxt(infiles, dtype=str)
 filelist = np.reshape(filelist, filelist.size) 
 
 dfs = []
 for fname in filelist: 
-    df = pd.read_csv(fname, sep='\s+',  parse_dates={'datetime': [0, 1]}, header=15)
-    df = df.set_index('datetime')
-    df.columns = ['temperature']
-    df = df.replace(9999.99, np.NaN)
-    #print(fname, df.max())
-    dfs.append(df)
+    try: 
+        df = pd.read_csv(fname, sep='\s+',  parse_dates={'datetime': [0, 1]}, header=16)
+        df = df.set_index('datetime')
+        df.columns = ['temperature']
+        df = df.replace(9999.99, np.NaN)
+        dfs.append(df)
+    except:
+        print (fname + ' is empty [ignore file]')
+        continue
+    
     
 # concatenate all data <----------- Here we need to check if duplicates   
 df_all = pd.concat(dfs, axis=0)
@@ -95,15 +105,14 @@ plt.xlim([0,53])
 plt.ylim([-2,18])
 plt.grid()
 plt.legend(['1989-2018 average', '2011']) #not correct years
-fig.set_size_inches(w=15,h=9)
+fig = ax.get_figure()
+fig.set_size_inches(w=12,h=8)
 fig_name = 'Comfort_Cove_T.png'
-fig.savefig(fig_name, dpi=300)
+fig.savefig(fig_name, dpi=200)
 os.system('convert -trim ' + fig_name + ' ' + fig_name)
 
 
-
 dfsHeader = [] 
-
 #Creates an array of dataframes, one for each file. Each dataframe is composed of the file's header.
 for fname in filelist:
     df = pd.read_csv(fname, nrows = 14)
