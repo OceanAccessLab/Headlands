@@ -12,9 +12,9 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
 import datetime
-import pandas as pd
 import os
 import getpass
+import xarray
 
 # Adjust fontsize/weight
 font = {'family' : 'normal',
@@ -97,7 +97,12 @@ weekly_2011 = df_2011.groupby('woy').mean()
 
 ax = weekly_clim.plot(linewidth=3, legend=None)
 weekly_2011.plot(ax=ax, linewidth=3)
-plt.fill_between(weekly_clim.index, np.squeeze(weekly_clim.values+weekly_std.values),np.squeeze(weekly_clim.values-weekly_std.values), facecolor='steelblue', interpolate=True , alpha=.3)
+plt.fill_between(weekly_clim.index, 
+                 np.squeeze(weekly_clim.values+weekly_std.values),
+                 np.squeeze(weekly_clim.values-weekly_std.values), 
+                 facecolor='steelblue', 
+                 interpolate=True , 
+                 alpha=.3)
 plt.ylabel(r'T ($^{\circ}C$)')
 plt.xlabel('Week of the year')
 plt.title('Comfort Cove temperature')
@@ -113,14 +118,15 @@ os.system('convert -trim ' + fig_name + ' ' + fig_name)
 
 
 dfsHeader = [] 
-#Creates an array of dataframes, one for each file. Each dataframe is composed of the file's header.
+#Creates an array of dataframes, one for each file. 
+#Each dataframe is composed of the file's header.
 for fname in filelist:
-    df = pd.read_csv(fname, nrows = 14)
-    headerValue = df["HEADER"].str.split("=", expand = True)
-    df["Title"] = headerValue[0]
-    df["Value"] = headerValue[1]
-    df = df[['Title',"Value"]]
-    dfsHeader.append(df)
+    dfH = pd.read_csv(fname, nrows = 14)
+    headerValue = dfH["HEADER"].str.split("=", expand = True)
+    dfH["Title"] = headerValue[0]
+    dfH["Value"] = headerValue[1]
+    dfH = dfH[['Title',"Value"]]
+    dfsHeader.append(dfH)
 
 print(dfsHeader[1]) #first file's header
 
@@ -165,23 +171,49 @@ for file in dfsHeader:
     
 
 headers = {'Station': station,
-           'Site Name': siteName,
-           'Start Date': startDate,
-           'Start Time': startTime,
-           'End Date': endDate,
-           'End Time': endTime,
-           'Latitude': latitude,
-           'Longitude': longitude,
-           'Inst Type': instType,
-           'Serial Number': serialNumber,
-           'Water Depth': waterDepth,
-           'Inst Depth': instDepth,
-           'Sampling Interval': samplingInterval,
-           'File Name': fileName }
+            'Site Name': siteName,
+            'Start Date': startDate,
+            'Start Time': startTime,
+            'End Date': endDate,
+            'End Time': endTime,
+            'Latitude': latitude,
+            'Longitude': longitude,
+            'Inst Type': instType,
+            'Serial Number': serialNumber,
+            'Water Depth': waterDepth,
+            'Inst Depth': instDepth,
+            'Sampling Interval': samplingInterval,
+            'File Name': fileName }
+
+colNames = ['Station', 'Site Name', 'Start Date', 'Start Time', 'End Date', 
+            'End Time','Latitude', 'Longitude',  'Inst Type', 'Serial Number',
+            'Water Depth','Inst Depth', 'Sampling Interval', 'File Name']
 
 #creates new dataframe based on the arrays
-headersdf = pd.DataFrame(headers)
+headersdf = pd.DataFrame(headers, columns = colNames)
 
 #dataframe where each column is a component of the header
 #each row is an individual file
 print(headersdf[:5]) #first five rows
+
+
+
+##converting dataframe to dataset
+xr = xarray.Dataset.from_dataframe(df_all)
+
+print(xr)
+
+#since station, lat and long are the same for each site, 
+#looks at first file header and takes the value at that index
+station = dfsHeader[0]["Value"][0]
+lat = dfsHeader[0]["Value"][6]
+long = dfsHeader[0]["Value"][7]
+
+#sets the attributes to station, latitude, and longitude
+xr.attrs={'Station': station,'Latitude': lat, 'Longitude': long}
+
+#
+xr['temperature'].attrs={'units':'celcius', 'long_name':'Temperature'}
+
+xr.to_netcdf('practice.nc')
+
