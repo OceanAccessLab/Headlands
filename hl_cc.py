@@ -37,8 +37,9 @@ dfs = []
 for fname in filelist: 
     try: 
         df = pd.read_csv(fname, sep='\s+',  parse_dates={'datetime': [0, 1]}, header=16)
-        df = df.set_index('datetime')
-        df.columns = ['temperature']
+        #leaving datetime as a column until after removing duplicates
+        #df = df.set_index('datetime')
+        df.columns = ['datetime', 'temperature']
         df = df.replace(9999.99, np.NaN)
         dfs.append(df)
     except:
@@ -46,9 +47,31 @@ for fname in filelist:
         continue
     
     
-# concatenate all data <----------- Here we need to check if duplicates   
+# concatenate all data 
 df_all = pd.concat(dfs, axis=0)
-df_all = df_all.sort_index()
+
+
+#df_all = df_all.sort_index()
+df_all.sort_values(by ='datetime',inplace = True)
+df_all.reset_index(drop=True,inplace = True)
+
+
+#creating a new dataframe for the duplicates
+dups = pd.DataFrame(columns= ['datetime','temperature'])
+
+
+#takes about three minutes for this part to run 
+#compares each row in df_all, if they have the same timestamp, adds to dups df
+for i in range(len(df_all)-1):
+    if df_all['datetime'][i] == df_all['datetime'][i+1]:
+        dups = dups.append({'datetime':df_all['datetime'][i], 
+                            'temperature':df_all['temperature'][i]}, 
+                           ignore_index=True)
+        dups = dups.append({'datetime':df_all['datetime'][i+1], 
+                            'temperature':df_all['temperature'][i+1]}, 
+                           ignore_index=True)
+
+
 
 # monthly average
 df_monthly = df_all.resample('M').mean()
@@ -98,11 +121,11 @@ weekly_2011 = df_2011.groupby('woy').mean()
 ax = weekly_clim.plot(linewidth=3, legend=None)
 weekly_2011.plot(ax=ax, linewidth=3)
 plt.fill_between(weekly_clim.index, 
-                 np.squeeze(weekly_clim.values+weekly_std.values),
-                 np.squeeze(weekly_clim.values-weekly_std.values), 
-                 facecolor='steelblue', 
-                 interpolate=True , 
-                 alpha=.3)
+                  np.squeeze(weekly_clim.values+weekly_std.values),
+                  np.squeeze(weekly_clim.values-weekly_std.values), 
+                  facecolor='steelblue', 
+                  interpolate=True , 
+                  alpha=.3)
 plt.ylabel(r'T ($^{\circ}C$)')
 plt.xlabel('Week of the year')
 plt.title('Comfort Cove temperature')
@@ -215,5 +238,6 @@ xr.attrs={'Station': station,'Latitude': lat, 'Longitude': long}
 #
 xr['temperature'].attrs={'units':'celcius', 'long_name':'Temperature'}
 
+#
 xr.to_netcdf('practice.nc')
 
