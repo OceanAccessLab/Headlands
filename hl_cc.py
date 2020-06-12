@@ -71,6 +71,39 @@ for i in range(len(df_all)-1):
                             'temperature':df_all['temperature'][i+1]}, 
                            ignore_index=True)
 
+#first ten rows of duplicates
+dups[:10]
+
+#sets index to datetime for duplicate dataframe and df_all
+dups = dups.set_index('datetime')
+df_all = df_all.set_index('datetime')
+
+
+#new data frame that resamples hourly, column for max temp and min temp
+resampledDups = pd.DataFrame()
+resampledDups['temp max'] = dups.temperature.resample('H').max()
+resampledDups['temp min'] = dups.temperature.resample('H').min()
+
+#adds column for the difference between max and min temp
+resampledDups['temp diff'] = resampledDups['temp max'] - resampledDups['temp min']
+resampledDups[:10]
+
+#histogram with all the data points
+resampledDups.hist(column = "temp diff", bins= [0,0.5,1,1.5,2,2.5,3,3.5,4,4.5])
+plt.title("Temperature differences between duplicates")
+plt.show()
+
+#historgram for data points less than 1 degree celcius
+resampledDups.hist(column = "temp diff", bins= [0,0.2,0.4,0.6,0.8,1])
+plt.title("Temp differences less than 1 degree")
+plt.show()
+
+#histogram for data points greater than 1 degree celcius
+resampledDups.hist(column = "temp diff", bins= [1,1.5,2,2.5,3,3.5,4,4.5])
+plt.title("Temp differences greater than 1 degree")
+plt.show()
+
+
 
 
 # monthly average
