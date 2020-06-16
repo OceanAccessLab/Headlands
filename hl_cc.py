@@ -37,71 +37,37 @@ dfs = []
 for fname in filelist: 
     try: 
         df = pd.read_csv(fname, sep='\s+',  parse_dates={'datetime': [0, 1]}, header=16)
-        #leaving datetime as a column until after removing duplicates
-        #df = df.set_index('datetime')
-        df.columns = ['datetime', 'temperature']
+        df = df.set_index('datetime')
+        df.columns = ['temperature']
         df = df.replace(9999.99, np.NaN)
         dfs.append(df)
     except:
         print (fname + ' is empty [ignore file]')
         continue
     
+ 
+# =============================================================================
+# Code for deleting duplicates, takes the average temp between any duplicates   
+# =============================================================================
     
 # concatenate all data 
 df_all = pd.concat(dfs, axis=0)
+df_all = df_all.sort_index()
 
+#sets temperature to the average (if not a duplicate, it doesn't affect temp)
+df_all['temperature'] = ((df_all.temperature.resample('H').max() + 
+                          df_all.temperature.resample('H').min())/2)
 
-#df_all = df_all.sort_index()
-df_all.sort_values(by ='datetime',inplace = True)
-df_all.reset_index(drop=True,inplace = True)
+#makes datetime a column so its easy to delete duplicates
+df_all = df_all.reset_index()
 
-
-#creating a new dataframe for the duplicates
-dups = pd.DataFrame(columns= ['datetime','temperature'])
-
-
-#takes about three minutes for this part to run 
-#compares each row in df_all, if they have the same timestamp, adds to dups df
-for i in range(len(df_all)-1):
-    if df_all['datetime'][i] == df_all['datetime'][i+1]:
-        dups = dups.append({'datetime':df_all['datetime'][i], 
-                            'temperature':df_all['temperature'][i]}, 
-                           ignore_index=True)
-        dups = dups.append({'datetime':df_all['datetime'][i+1], 
-                            'temperature':df_all['temperature'][i+1]}, 
-                           ignore_index=True)
-
-#first ten rows of duplicates
-dups[:10]
-
-#sets index to datetime for duplicate dataframe and df_all
-dups = dups.set_index('datetime')
+#drops datetime duplicates
+df_all = df_all.drop_duplicates(subset='datetime')
 df_all = df_all.set_index('datetime')
 
+df_all
 
-#new data frame that resamples hourly, column for max temp and min temp
-resampledDups = pd.DataFrame()
-resampledDups['temp max'] = dups.temperature.resample('H').max()
-resampledDups['temp min'] = dups.temperature.resample('H').min()
 
-#adds column for the difference between max and min temp
-resampledDups['temp diff'] = resampledDups['temp max'] - resampledDups['temp min']
-resampledDups[:10]
-
-#histogram with all the data points
-resampledDups.hist(column = "temp diff", bins= [0,0.5,1,1.5,2,2.5,3,3.5,4,4.5])
-plt.title("Temperature differences between duplicates")
-plt.show()
-
-#historgram for data points less than 1 degree celcius
-resampledDups.hist(column = "temp diff", bins= [0,0.2,0.4,0.6,0.8,1])
-plt.title("Temp differences less than 1 degree")
-plt.show()
-
-#histogram for data points greater than 1 degree celcius
-resampledDups.hist(column = "temp diff", bins= [1,1.5,2,2.5,3,3.5,4,4.5])
-plt.title("Temp differences greater than 1 degree")
-plt.show()
 
 
 
@@ -111,7 +77,6 @@ df_monthly = df_all.resample('M').mean()
 df_monthly.plot()
 plt.title("Monthly Average")
 plt.show()
-
 
 df_monthly.to_csv('comfort_cove_thermograph_1989-2017_monthly.csv')
 
@@ -173,6 +138,11 @@ fig.savefig(fig_name, dpi=200)
 os.system('convert -trim ' + fig_name + ' ' + fig_name)
 
 
+
+# =============================================================================
+# Code for extracting info from file header
+# =============================================================================
+
 dfsHeader = [] 
 #Creates an array of dataframes, one for each file. 
 #Each dataframe is composed of the file's header.
@@ -184,9 +154,6 @@ for fname in filelist:
     dfH = dfH[['Title',"Value"]]
     dfsHeader.append(dfH)
 
-print(dfsHeader[1]) #first file's header
-
- 
 #array for each header component   
 station = []
 siteName = []
@@ -202,7 +169,6 @@ waterDepth = []
 instDepth = []
 samplingInterval = []
 fileName = []
-
 
 #extracts each individual value from each header item, from each file
 #adds each value to correlated array
@@ -225,7 +191,6 @@ for file in dfsHeader:
     count += 1
     
     
-
 headers = {'Station': station,
             'Site Name': siteName,
             'Start Date': startDate,
@@ -254,6 +219,9 @@ print(headersdf[:5]) #first five rows
 
 
 
+# =============================================================================
+# Code for converting to netCDF file
+# =============================================================================
 ##converting dataframe to dataset
 xr = xarray.Dataset.from_dataframe(df_all)
 
