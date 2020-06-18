@@ -15,6 +15,7 @@ import datetime
 import os
 import getpass
 import xarray
+import hl_modules
 
 # Adjust fontsize/weight
 font = {'family' : 'normal',
@@ -46,29 +47,12 @@ for fname in filelist:
         continue
     
  
-# =============================================================================
-# Code for deleting duplicates, takes the average temp between any duplicates   
-# =============================================================================
-    
-# concatenate all data 
+# concatenates all data 
 df_all = pd.concat(dfs, axis=0)
 df_all = df_all.sort_index()
 
-#sets temperature to the average (if not a duplicate, it doesn't affect temp)
-df_all['temperature'] = ((df_all.temperature.resample('H').max() + 
-                          df_all.temperature.resample('H').min())/2)
-
-#makes datetime a column so its easy to delete duplicates
-df_all = df_all.reset_index()
-
-#drops datetime duplicates
-df_all = df_all.drop_duplicates(subset='datetime')
-df_all = df_all.set_index('datetime')
-
-df_all
-
-
-
+#removes duplicates
+df_all = hl_modules.removeDuplicates(df_all)
 
 
 
@@ -227,18 +211,16 @@ xr = xarray.Dataset.from_dataframe(df_all)
 
 print(xr)
 
-#since station, lat and long are the same for each site, 
-#looks at first file header and takes the value at that index
-station = dfsHeader[0]["Value"][0]
-lat = dfsHeader[0]["Value"][6]
-long = dfsHeader[0]["Value"][7]
+#attribute values
+station = headersdf['Station'].unique()
+lat = headersdf['Latitude'].unique()
+long = headersdf['Longitude'].unique()
 
-#sets the attributes to station, latitude, and longitude
+#sets the attributes
 xr.attrs={'Station': station,'Latitude': lat, 'Longitude': long}
 
-#
 xr['temperature'].attrs={'units':'celcius', 'long_name':'Temperature'}
 
-#
+
 xr.to_netcdf('practice.nc')
 
