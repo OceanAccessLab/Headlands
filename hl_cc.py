@@ -23,36 +23,17 @@ font = {'family' : 'normal',
         'size'   : 18}
 plt.rc('font', **font)
 
-# Check user's path
-if getpass.getuser() == 'cyrf0006':
-    files_path = '~/data/Headlands_Trimmed/'
-else:
-    files_path = '~/Desktop'
-# Generate the list
-infiles = 'comfortcove.list'
-os.system('ls ' + os.path.join(files_path, 'ComfortCove/*.rpf') + ' > ' + infiles)
-filelist = np.genfromtxt(infiles, dtype=str)
-filelist = np.reshape(filelist, filelist.size) 
-
-dfs = []
-for fname in filelist: 
-    try: 
-        df = pd.read_csv(fname, sep='\s+',  parse_dates={'datetime': [0, 1]}, header=16)
-        df = df.set_index('datetime')
-        df.columns = ['temperature']
-        df = df.replace(9999.99, np.NaN)
-        dfs.append(df)
-    except:
-        print (fname + ' is empty [ignore file]')
-        continue
     
- 
-# concatenates all data 
-df_all = pd.concat(dfs, axis=0)
-df_all = df_all.sort_index()
+#makes list of every file in ComfortCove folder
+fileList = hl_modules.getFileList("ComfortCove")
 
-#removes duplicates
+#reads the rpf files listed in fileList
+df_all = hl_modules.readrpf(fileList)
+
+#removes duplicates from df_all
 df_all = hl_modules.removeDuplicates(df_all)
+
+headerInfo = hl_modules.extractHeaders(fileList)
 
 
 
@@ -122,105 +103,4 @@ fig.savefig(fig_name, dpi=200)
 os.system('convert -trim ' + fig_name + ' ' + fig_name)
 
 
-
-# =============================================================================
-# Code for extracting info from file header
-# =============================================================================
-
-dfsHeader = [] 
-#Creates an array of dataframes, one for each file. 
-#Each dataframe is composed of the file's header.
-for fname in filelist:
-    dfH = pd.read_csv(fname, nrows = 14)
-    headerValue = dfH["HEADER"].str.split("=", expand = True)
-    dfH["Title"] = headerValue[0]
-    dfH["Value"] = headerValue[1]
-    dfH = dfH[['Title',"Value"]]
-    dfsHeader.append(dfH)
-
-#array for each header component   
-station = []
-siteName = []
-startDate = []
-startTime = []
-endDate = []
-endTime = []
-latitude = []
-longitude = []
-instType = []
-serialNumber = []
-waterDepth = []
-instDepth = []
-samplingInterval = []
-fileName = []
-
-#extracts each individual value from each header item, from each file
-#adds each value to correlated array
-count = 0
-for file in dfsHeader:
-    station.append(dfsHeader[count]["Value"][0])
-    siteName.append(dfsHeader[count]["Value"][1])
-    startDate.append(dfsHeader[count]["Value"][2])
-    startTime.append(dfsHeader[count]["Value"][3])
-    endDate.append(dfsHeader[count]["Value"][4])
-    endTime.append(dfsHeader[count]["Value"][5])
-    latitude.append(dfsHeader[count]["Value"][6])
-    longitude.append(dfsHeader[count]["Value"][7])
-    instType.append(dfsHeader[count]["Value"][8])
-    serialNumber.append(dfsHeader[count]["Value"][9])
-    waterDepth.append(dfsHeader[count]["Value"][10])
-    instDepth.append(dfsHeader[count]["Value"][11])
-    samplingInterval.append(dfsHeader[count]["Value"][12])
-    fileName.append(dfsHeader[count]["Value"][13])
-    count += 1
-    
-    
-headers = {'Station': station,
-            'Site Name': siteName,
-            'Start Date': startDate,
-            'Start Time': startTime,
-            'End Date': endDate,
-            'End Time': endTime,
-            'Latitude': latitude,
-            'Longitude': longitude,
-            'Inst Type': instType,
-            'Serial Number': serialNumber,
-            'Water Depth': waterDepth,
-            'Inst Depth': instDepth,
-            'Sampling Interval': samplingInterval,
-            'File Name': fileName }
-
-colNames = ['Station', 'Site Name', 'Start Date', 'Start Time', 'End Date', 
-            'End Time','Latitude', 'Longitude',  'Inst Type', 'Serial Number',
-            'Water Depth','Inst Depth', 'Sampling Interval', 'File Name']
-
-#creates new dataframe based on the arrays
-headersdf = pd.DataFrame(headers, columns = colNames)
-
-#dataframe where each column is a component of the header
-#each row is an individual file
-print(headersdf[:5]) #first five rows
-
-
-
-# =============================================================================
-# Code for converting to netCDF file
-# =============================================================================
-##converting dataframe to dataset
-xr = xarray.Dataset.from_dataframe(df_all)
-
-print(xr)
-
-#attribute values
-station = headersdf['Station'].unique()
-lat = headersdf['Latitude'].unique()
-long = headersdf['Longitude'].unique()
-
-#sets the attributes
-xr.attrs={'Station': station,'Latitude': lat, 'Longitude': long}
-
-xr['temperature'].attrs={'units':'celcius', 'long_name':'Temperature'}
-
-
-xr.to_netcdf('practice.nc')
 
