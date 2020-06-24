@@ -1,10 +1,12 @@
 """
 Modules for headlands project:
-    - getting file list from a folder
-    - reading .rpf files
-    - removing duplicates
-    - extracting header info
-    - writing to netCDF
+    1. Get file list from a folder
+    2. Read .rpf files
+    3. Remove duplicates
+    4. Extract header info
+    5. Plot annual curve
+    6. Plot the trend between two months
+    7. Write to netCDF
 
 @author: giuliabronzi
 """
@@ -13,6 +15,7 @@ import os
 import getpass
 import pandas as pd
 import numpy as np
+import matplotlib.pyplot as plt
 
 
 # =============================================================================
@@ -68,6 +71,8 @@ def readrpf(filelist):
 # =============================================================================
 # Takes in a dataframe, finds average temp between any duplicates,
 # removes the duplicates, and returns the dataframe. 
+#
+# Returns dataframe.
 # =============================================================================
 def removeDuplicates(df):
     
@@ -86,7 +91,10 @@ def removeDuplicates(df):
 
 
 # =============================================================================
-# 
+# Takes in a list of file names and creates a dataframe containting all 
+# header information. Each row of the dataframe relates to one file. 
+#   
+# Returns dataframe
 # =============================================================================
 def extractHeaders(filelist):
 
@@ -162,6 +170,71 @@ def extractHeaders(filelist):
     headersdf = pd.DataFrame(headers, columns = colNames)
 
     return headersdf
+
+
+# =============================================================================
+# Takes in a dataframe and a year and produces a plot comparing the inputted
+#  year with the average from 1989-2018
+# =============================================================================
+def plotAnnualCurve(df, year):
+    df['woy'] = df.index.weekofyear
+    weekly_clim = df.groupby('woy').mean()
+    weekly_std = df.groupby('woy').std()
+    df_year = df[df.index.year >= year]
+    weekly_year = df_year.groupby('woy').mean()
+    
+    ax = weekly_clim.plot(linewidth=3, legend=None)
+    weekly_year.plot(ax=ax, linewidth=3)
+    plt.fill_between(weekly_clim.index, 
+                      np.squeeze(weekly_clim.values+weekly_std.values),
+                      np.squeeze(weekly_clim.values-weekly_std.values), 
+                      facecolor='steelblue', 
+                      interpolate=True , 
+                      alpha=.3)
+    plt.ylabel(r'T ($^{\circ}C$)')
+    plt.xlabel('Week of the year')
+    plt.title('Comfort Cove temperature')
+    plt.xlim([0,53])
+    plt.ylim([-2,18])
+    plt.grid()
+    plt.legend(['1989-2018 average', year])
+    fig = ax.get_figure()
+    fig.set_size_inches(w=12,h=8)
+    fig_name = 'Comfort_Cove_T.png'
+    fig.savefig(fig_name, dpi=200)
+    os.system('convert -trim ' + fig_name + ' ' + fig_name)
+    
+# =============================================================================
+# 
+# =============================================================================
+def plotAnomalies(df_monthly, lowerMonthNum, upperMonthNum):
+    df_summer = df_monthly[(df_monthly.index.month>= lowerMonthNum) & 
+                           (df_monthly.index.month<= upperMonthNum)]
+    df_summer = df_summer.resample('As').mean()
+    df_summer.index = df_summer.index.year
+    df_summer.to_csv('comfort_cove_thermograph_1989-2017_June-July.csv')
+    
+    
+    ## ---- plot summer data in anomalies ---- ##
+    anom = (df_summer - df_summer.mean()) / df_summer.std()
+    df1 = anom[anom<0]
+    df2 = anom[anom>0]
+    fig = plt.figure(4)
+    fig.clf()
+    width = .9
+    p1 = plt.bar(df1.index, np.squeeze(df1.values), width, alpha=0.8, 
+                 color='steelblue')
+    p2 = plt.bar(df2.index, np.squeeze(df2.values), width, bottom=0, 
+                 alpha=0.8, color='indianred')
+    plt.ylabel('Standardized Anomaly')
+    plt.xlabel('Year')
+    plt.title('Comfort Cove temperature (June-July)')
+    plt.grid()
+    fig.set_size_inches(w=15,h=9)
+    fig_name = 'Comfort_Cove_anomalies.png'
+    #plt.annotate('data source: NCDC/NOAA', xy=(.75, .01), xycoords='figure fraction', annotation_clip=False, FontSize=12)
+    fig.savefig(fig_name, dpi=300)
+    os.system('convert -trim ' + fig_name + ' ' + fig_name)
 
 
 # # =============================================================================
