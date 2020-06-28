@@ -8,13 +8,7 @@ Frederic.Cyr@dfo-mpo.gc.ca - February 2019
 
 '''
 
-import pandas as pd
 import matplotlib.pyplot as plt
-import numpy as np
-import datetime
-import os
-import getpass
-import xarray
 import hl_modules
 
 # Adjust fontsize/weight
@@ -45,13 +39,17 @@ df_monthly = df_all.resample('M').mean()
 
 # df_monthly.to_csv('comfort_cove_thermograph_1989-2017_monthly.csv')
 
+hl_modules.plotTimeSeries(df_monthly, 6, 8, "ComfortCove")
 
 #plot comparing annual curve to average curve from 1989-2018
-hl_modules.plotAnnualCurve(df_all, 2018)
+hl_modules.plotAnnualCurve(df_all, 2018, "ComfortCove")
 
 
-hl_modules.plotAnomalies(df_monthly, 6,8)
+#plots monthly anomalies for June-July
+hl_modules.plotAnomalies(df_monthly, 6,7, "ComfortCove")
 
+
+#print(hl_modules.convertNetCDF(df_all, headerInfo, "ComfortCove"))
 
 
 
