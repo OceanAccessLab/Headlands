@@ -5,8 +5,9 @@ Modules for headlands project:
     3. Remove duplicates
     4. Extract header info
     5. Plot annual curve
-    6. Plot the trend between two months
-    7. Write to netCDF
+    6. Plot anomalies
+    7. Plot time series
+    8. Write to netCDFk
 
 @author: giuliabronzi
 """
@@ -16,6 +17,9 @@ import getpass
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+import xarray
+import calendar as cal
+from scipy.stats import linregress
 
 
 # =============================================================================
@@ -72,7 +76,7 @@ def readrpf(filelist):
 # Takes in a dataframe, finds average temp between any duplicates,
 # removes the duplicates, and returns the dataframe. 
 #
-# Returns dataframe.
+# Returns a dataframe.
 # =============================================================================
 def removeDuplicates(df):
     
@@ -94,7 +98,7 @@ def removeDuplicates(df):
 # Takes in a list of file names and creates a dataframe containting all 
 # header information. Each row of the dataframe relates to one file. 
 #   
-# Returns dataframe
+# Returns a dataframe.
 # =============================================================================
 def extractHeaders(filelist):
 
@@ -172,11 +176,14 @@ def extractHeaders(filelist):
     return headersdf
 
 
+
 # =============================================================================
 # Takes in a dataframe and a year and produces a plot comparing the inputted
-#  year with the average from 1989-2018
+# year with the average from 1989-2018.
+#
+# Plots graph. 
 # =============================================================================
-def plotAnnualCurve(df, year):
+def plotAnnualCurve(df, year, siteName):
     df['woy'] = df.index.weekofyear
     weekly_clim = df.groupby('woy').mean()
     weekly_std = df.groupby('woy').std()
@@ -193,26 +200,32 @@ def plotAnnualCurve(df, year):
                       alpha=.3)
     plt.ylabel(r'T ($^{\circ}C$)')
     plt.xlabel('Week of the year')
-    plt.title('Comfort Cove temperature')
+    plt.title('{} temperature'.format(siteName))
     plt.xlim([0,53])
     plt.ylim([-2,18])
     plt.grid()
     plt.legend(['1989-2018 average', year])
     fig = ax.get_figure()
     fig.set_size_inches(w=12,h=8)
-    fig_name = 'Comfort_Cove_T.png'
+    fig_name = '{}_T.png'.format(siteName)   
     fig.savefig(fig_name, dpi=200)
     os.system('convert -trim ' + fig_name + ' ' + fig_name)
     
+
 # =============================================================================
-# 
+# Plots the standard anomalies for some months. Takes in a dataframe (that has
+# has been resampled and averaged by month), and a number for the lower month 
+# bound and a number for the upper month bound (ie. for June - July, input 6 
+# and 7). 
+#
+# Plots graph.
 # =============================================================================
-def plotAnomalies(df_monthly, lowerMonthNum, upperMonthNum):
+def plotAnomalies(df_monthly, lowerMonthNum, upperMonthNum, siteName):
     df_summer = df_monthly[(df_monthly.index.month>= lowerMonthNum) & 
                            (df_monthly.index.month<= upperMonthNum)]
     df_summer = df_summer.resample('As').mean()
     df_summer.index = df_summer.index.year
-    df_summer.to_csv('comfort_cove_thermograph_1989-2017_June-July.csv')
+    #df_summer.to_csv('comfort_cove_thermograph_1989-2017_June-July.csv')
     
     
     ## ---- plot summer data in anomalies ---- ##
@@ -222,39 +235,92 @@ def plotAnomalies(df_monthly, lowerMonthNum, upperMonthNum):
     fig = plt.figure(4)
     fig.clf()
     width = .9
-    p1 = plt.bar(df1.index, np.squeeze(df1.values), width, alpha=0.8, 
+    plt.bar(df1.index, np.squeeze(df1.values), width, alpha=0.8, 
                  color='steelblue')
-    p2 = plt.bar(df2.index, np.squeeze(df2.values), width, bottom=0, 
+    plt.bar(df2.index, np.squeeze(df2.values), width, bottom=0, 
                  alpha=0.8, color='indianred')
     plt.ylabel('Standardized Anomaly')
     plt.xlabel('Year')
-    plt.title('Comfort Cove temperature (June-July)')
+    plt.title('{} temperature ({}-{})'.format(siteName, 
+                                              cal.month_name[lowerMonthNum],
+                                              cal.month_name[upperMonthNum])) 
     plt.grid()
     fig.set_size_inches(w=15,h=9)
-    fig_name = 'Comfort_Cove_anomalies.png'
+    fig_name = '{}_anomalies.png'.format(siteName)
     #plt.annotate('data source: NCDC/NOAA', xy=(.75, .01), xycoords='figure fraction', annotation_clip=False, FontSize=12)
     fig.savefig(fig_name, dpi=300)
     os.system('convert -trim ' + fig_name + ' ' + fig_name)
+    
+    
+# =============================================================================
+# Plots time series 
+#
+# Plots graph.
+# =============================================================================
+def plotTimeSeries(df_monthly, lowerMonthNum, upperMonthNum, siteName):
+    
+    #takes df_monthly and creates a new df between the given bounds
+    df_series = df_monthly[(df_monthly.index.month>= lowerMonthNum) & 
+                            (df_monthly.index.month<= upperMonthNum)]
+    df_series = df_series.resample('As').mean()
+    df_series.index = df_series.index.year
+    
+    #drops NA values, otherwise, linregress won't work
+    df_series = df_series.dropna()
 
 
-# # =============================================================================
-# # Code for converting to netCDF file
-# # =============================================================================
-# ##converting dataframe to dataset
-# xr = xarray.Dataset.from_dataframe(df_all)
-
-# print(xr)
-
-# #attribute values
-# station = headersdf['Station'].unique()
-# lat = headersdf['Latitude'].unique()
-# long = headersdf['Longitude'].unique()
-
-# #sets the attributes
-# xr.attrs={'Station': station,'Latitude': lat, 'Longitude': long}
-
-# xr['temperature'].attrs={'units':'celcius', 'long_name':'Temperature'}
+    #linear regression math
+    stats = linregress(df_series.index, df_series['temperature'])
+    m = stats.slope
+    b = stats.intercept
 
 
-# xr.to_netcdf('practice.nc')
+    #scatter plot
+    plt.scatter(df_series.index, df_series['temperature'])
+    #plots linear regression line
+    plt.plot(df_series.index, m*df_series.index + b, color="red") 
+    plt.xlabel("Year")
+    plt.ylabel(r'T ($^{\circ}C$)')
+    plt.title('{} time series ({}-{})'.format(siteName, 
+                                              cal.month_name[lowerMonthNum],
+                                              cal.month_name[upperMonthNum]))
+    plt.grid()
+    
+
+
+# =============================================================================
+# Takes in a dataframe, the dataframe with header info, and the site name
+# and converts to a netCDF file.
+#
+# Returns a dataset and creates a .nc file.
+# =============================================================================
+def convertNetCDF(df_all, headersdf, siteName):
+    
+    #converting dataframe to dataset
+    #dimension = datetime variable
+    #data variable = temperature
+    xr = xarray.Dataset.from_dataframe(df_all)
+    
+    #attribute values
+    #creates errors when attribute is a list, so need to convert to string
+    station = str(headersdf['Station'].unique())
+    lat = str(headersdf['Latitude'].unique())
+    long = str(headersdf['Longitude'].unique())
+    startDate = str(headersdf['Start Date'].unique())
+    endDate = str(headersdf['End Date'].unique())
+    instDepth = str(headersdf['Inst Depth'].unique())
+    fileName = str(headersdf['File Name'].unique())
+    
+    #sets the attributes
+    xr.attrs={'Station': station,'Latitude': lat, 'Longitude': long,
+              'Start Date': startDate, 'End Date': endDate, 'Inst Depth':instDepth,
+              'File Name': fileName}
+    
+    #sets characteristics to data variable
+    xr['temperature'].attrs={'units':'Celcius', 'long_name':'Temperature'}
+    
+    #converts to netCDF file where file name = 'siteName_netCDF.nc'
+    xr.to_netcdf('{}_netCDF.nc'.format(siteName))
+    
+    return xr
 
