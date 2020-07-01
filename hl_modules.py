@@ -6,8 +6,9 @@ Modules for headlands project:
     4. Extract header info
     5. Plot annual curve
     6. Plot anomalies
-    7. Plot time series
-    8. Write to netCDFk
+    7. Plot monthly time series
+    8. Plot daily time series
+    9. Write to netCDFk
 
 @author: giuliabronzi
 """
@@ -176,7 +177,6 @@ def extractHeaders(filelist):
     return headersdf
 
 
-
 # =============================================================================
 # Takes in a dataframe and a year and produces a plot comparing the inputted
 # year with the average from 1989-2018.
@@ -213,7 +213,7 @@ def plotAnnualCurve(df, year, siteName):
     
 
 # =============================================================================
-# Plots the standard anomalies for some months. Takes in a dataframe (that has
+# Plots the standard anomalies for a set of months. Takes in a dataframe (that has
 # has been resampled and averaged by month), and a number for the lower month 
 # bound and a number for the upper month bound (ie. for June - July, input 6 
 # and 7). 
@@ -250,14 +250,16 @@ def plotAnomalies(df_monthly, lowerMonthNum, upperMonthNum, siteName):
     #plt.annotate('data source: NCDC/NOAA', xy=(.75, .01), xycoords='figure fraction', annotation_clip=False, FontSize=12)
     fig.savefig(fig_name, dpi=300)
     os.system('convert -trim ' + fig_name + ' ' + fig_name)
+    plt.show()
     
     
 # =============================================================================
-# Plots time series 
+# Plots time series and regression line for a set of months. Takes in a data
+# frame, the number of the lower and upper months, and the site name.  
 #
 # Plots graph.
 # =============================================================================
-def plotTimeSeries(df_monthly, lowerMonthNum, upperMonthNum, siteName):
+def plotTSMonth(df_monthly, lowerMonthNum, upperMonthNum, siteName):
     
     #takes df_monthly and creates a new df between the given bounds
     df_series = df_monthly[(df_monthly.index.month>= lowerMonthNum) & 
@@ -271,21 +273,53 @@ def plotTimeSeries(df_monthly, lowerMonthNum, upperMonthNum, siteName):
 
     #linear regression math
     stats = linregress(df_series.index, df_series['temperature'])
+    x = df_series.index
     m = stats.slope
     b = stats.intercept
+    y = m*x + b
 
 
     #scatter plot
     plt.scatter(df_series.index, df_series['temperature'])
     #plots linear regression line
-    plt.plot(df_series.index, m*df_series.index + b, color="red") 
+    plt.plot(x, y, color="red") 
     plt.xlabel("Year")
     plt.ylabel(r'T ($^{\circ}C$)')
     plt.title('{} time series ({}-{})'.format(siteName, 
                                               cal.month_name[lowerMonthNum],
                                               cal.month_name[upperMonthNum]))
     plt.grid()
+    plt.show()
+
+
+# =============================================================================
+# plotting time series for one month out of a certain year 
+# =============================================================================
+def plotTSDay(df, year, month, siteName):
+    df_series = df[df.index.year == year]
     
+    df_day = df_series[df_series.index.month == month]
+    
+    plt.scatter(df_day.index.day, df_day['temperature'])
+    plt.xlabel("Day of the month")
+    plt.ylabel("Temperature")
+    
+    plt.title('Daily Temps for {} {} ({})'.format(cal.month_name[month],
+                                                  year, siteName))
+ 
+    
+    
+    
+
+# =============================================================================
+# Find upwelling
+# =============================================================================
+#def findUpwell():
+    
+    
+    
+
+
 
 
 # =============================================================================
