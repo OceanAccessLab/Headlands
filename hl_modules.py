@@ -21,6 +21,7 @@ import matplotlib.pyplot as plt
 import xarray
 import calendar as cal
 from scipy.stats import linregress
+import seaborn as sns
 
 
 # =============================================================================
@@ -211,6 +212,8 @@ def plotAnnualCurve(df, year, siteName):
     fig.savefig(fig_name, dpi=200)
     os.system('convert -trim ' + fig_name + ' ' + fig_name)
     
+    plt.show()
+    
 
 # =============================================================================
 # Plots the standard anomalies for a set of months. Takes in a dataframe (that has
@@ -266,28 +269,16 @@ def plotTSMonth(df_monthly, lowerMonthNum, upperMonthNum, siteName):
                             (df_monthly.index.month<= upperMonthNum)]
     df_series = df_series.resample('As').mean()
     df_series.index = df_series.index.year
-    
-    #drops NA values, otherwise, linregress won't work
-    df_series = df_series.dropna()
 
 
-    #linear regression math
-    stats = linregress(df_series.index, df_series['temperature'])
-    x = df_series.index
-    m = stats.slope
-    b = stats.intercept
-    y = m*x + b
-
-
-    #scatter plot
-    plt.scatter(df_series.index, df_series['temperature'])
-    #plots linear regression line
-    plt.plot(x, y, color="red") 
+    sns.regplot(x=df_series.index , y=df_series['temperature'], 
+                data = df_series)
+   
     plt.xlabel("Year")
     plt.ylabel(r'T ($^{\circ}C$)')
     plt.title('{} time series ({}-{})'.format(siteName, 
                                               cal.month_name[lowerMonthNum],
-                                              cal.month_name[upperMonthNum]))
+                                               cal.month_name[upperMonthNum]))
     plt.grid()
     plt.show()
 
@@ -300,12 +291,20 @@ def plotTSDay(df, year, month, siteName):
     
     df_day = df_series[df_series.index.month == month]
     
-    plt.scatter(df_day.index.day, df_day['temperature'])
+    fig, ax = plt.subplots()
+    
+    plt.plot(df_day.index, df_day['temperature'])
+    
+    #ax.set_xticklabels(df.index.day)
+    
+    plt.rc('xtick', labelsize= 5)
     plt.xlabel("Day of the month")
     plt.ylabel("Temperature")
     
     plt.title('Daily Temps for {} {} ({})'.format(cal.month_name[month],
                                                   year, siteName))
+    
+    plt.show()
  
     
     
@@ -314,7 +313,35 @@ def plotTSDay(df, year, month, siteName):
 # =============================================================================
 # Find upwelling
 # =============================================================================
-#def findUpwell():
+def findUpwelling(df_all, year, month, siteName):
+    
+    df_year = df_all[df_all.index.year == year]
+    df_month = df_year[df_year.index.month == month]
+    #df_month.index = df_month.index.day
+ 
+    
+    anom = (df_month - df_month.mean()) / df_month.std()
+    df1 = anom[anom<0]
+    df2 = anom[anom>0]
+    fig = plt.figure(4)
+    fig.clf()
+    width = .9
+    plt.bar(df1.index, np.squeeze(df1.values), width, alpha=0.8, 
+                  color='steelblue')
+    plt.bar(df2.index, np.squeeze(df2.values), width, bottom=0, 
+                  alpha=0.8, color='indianred')
+    plt.ylabel('Standardized Anomaly')
+    plt.xlabel('Year')
+    plt.title('{} temperature {} {}'.format(siteName,
+                                            cal.month_name[month], year)) 
+    plt.rc('xtick', labelsize= 15)
+    plt.grid()
+    fig.set_size_inches(w=15,h=9)
+    fig_name = '{}_anomalies.png'.format(siteName)
+    #plt.annotate('data source: NCDC/NOAA', xy=(.75, .01), xycoords='figure fraction', annotation_clip=False, FontSize=12)
+    fig.savefig(fig_name, dpi=300)
+    os.system('convert -trim ' + fig_name + ' ' + fig_name)
+    plt.show()
     
     
     
