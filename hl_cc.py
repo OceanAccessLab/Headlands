@@ -39,11 +39,8 @@ df_monthly = df_all.resample('M').mean()
 
 
 
-hl_modules.findUpwelling(df_all, 1997, 6, "Comfort Cove")
-
-
 # plot comparing annual curve to average curve from 1989-2018
-hl_modules.plotAnnualCurve(df_all, 2007, "ComfortCove")
+#hl_modules.plotAnnualCurve(df_all, 2007, "ComfortCove")
 
 
 # plots monthly anomalies for June-July
@@ -69,6 +66,9 @@ hl_modules.plotTSMonth(df_monthly, 8, 8, "ComfortCove")
 hl_modules.plotTSDay(df_all, 1997, 6, "comfort cove")
 
 
+#creates an error when you run both at the same time 
+#hl_modules.findClimatology(df_all, 2007, 'woy', "Comfort Cove")
+hl_modules.findClimatology(df_all, 2008, 'doy', "Comfort Cove")
 
 
 
