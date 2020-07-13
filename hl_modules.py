@@ -20,7 +20,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 import xarray
 import calendar as cal
-from scipy.stats import linregress
 import seaborn as sns
 
 
@@ -185,6 +184,9 @@ def extractHeaders(filelist):
 # Plots graph. 
 # =============================================================================
 def plotAnnualCurve(df, year, siteName):
+    
+    
+    
     df['woy'] = df.index.weekofyear
     weekly_clim = df.groupby('woy').mean()
     weekly_std = df.groupby('woy').std()
@@ -224,6 +226,7 @@ def plotAnnualCurve(df, year, siteName):
 # Plots graph.
 # =============================================================================
 def plotAnomalies(df_monthly, lowerMonthNum, upperMonthNum, siteName):
+    
     df_summer = df_monthly[(df_monthly.index.month>= lowerMonthNum) & 
                            (df_monthly.index.month<= upperMonthNum)]
     df_summer = df_summer.resample('As').mean()
@@ -306,49 +309,44 @@ def plotTSDay(df, year, month, siteName):
     
     plt.show()
  
-    
+        
     
     
 
 # =============================================================================
-# Find upwelling
+# Find climatology
 # =============================================================================
-def findUpwelling(df_all, year, month, siteName):
+def findClimatology(df_all, year, method, siteName):
     
-    df_year = df_all[df_all.index.year == year]
-    df_month = df_year[df_year.index.month == month]
-    #df_month.index = df_month.index.day
- 
+    if method == 'doy':
+        df_all[method] = df_all.index.dayofyear
+    elif method == 'woy':
+        df_all[method] = df_all.index.weekofyear
     
-    anom = (df_month - df_month.mean()) / df_month.std()
-    df1 = anom[anom<0]
-    df2 = anom[anom>0]
-    fig = plt.figure(4)
-    fig.clf()
-    width = .9
-    plt.bar(df1.index, np.squeeze(df1.values), width, alpha=0.8, 
-                  color='steelblue')
-    plt.bar(df2.index, np.squeeze(df2.values), width, bottom=0, 
-                  alpha=0.8, color='indianred')
-    plt.ylabel('Standardized Anomaly')
-    plt.xlabel('Year')
-    plt.title('{} temperature {} {}'.format(siteName,
-                                            cal.month_name[month], year)) 
-    plt.rc('xtick', labelsize= 15)
-    plt.grid()
-    fig.set_size_inches(w=15,h=9)
-    fig_name = '{}_anomalies.png'.format(siteName)
-    #plt.annotate('data source: NCDC/NOAA', xy=(.75, .01), xycoords='figure fraction', annotation_clip=False, FontSize=12)
-    fig.savefig(fig_name, dpi=300)
-    os.system('convert -trim ' + fig_name + ' ' + fig_name)
+    daily_clim = df_all.groupby(method).mean() 
+    daily_std = df_all.groupby(method).std() 
+    df_year = df_all[df_all.index.year == year] # >
+    daily_year = df_year.groupby(method).mean()
+
+    ax = daily_clim.plot(linewidth=1, legend=None)
+    daily_year.plot(ax=ax, linewidth=1)
+    plt.fill_between(daily_clim.index,
+                  np.squeeze(daily_clim.values+daily_std.values),
+                  np.squeeze(daily_clim.values-daily_std.values),
+                  facecolor='steelblue',
+                  interpolate=True ,
+                  alpha=.3)
+    
+    plt.rc('xtick', labelsize= 8)
+    plt.rc('ytick', labelsize= 8)
+    plt.xlabel("Day of the Year")
+    plt.ylabel("Temperature")
+    
+    plt.title('{} Temps for {}'.format(year, siteName))
+    ax.legend(['Climatology', year])
+
     plt.show()
-    
-    
-    
-
-
-
-
+        
 # =============================================================================
 # Takes in a dataframe, the dataframe with header info, and the site name
 # and converts to a netCDF file.
