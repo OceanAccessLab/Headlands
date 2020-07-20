@@ -8,7 +8,9 @@ Modules for headlands project:
     6. Plot anomalies
     7. Plot monthly time series
     8. Plot daily time series
-    9. Write to netCDFk
+    9. Plot climatology and upwells
+    10. Plot derivative curve
+    11. Write to netCDFk
 
 @author: giuliabronzi
 """
@@ -185,12 +187,12 @@ def extractHeaders(filelist):
 # =============================================================================
 def plotAnnualCurve(df, year, siteName):
     
+    dfA = df
     
-    
-    df['woy'] = df.index.weekofyear
-    weekly_clim = df.groupby('woy').mean()
-    weekly_std = df.groupby('woy').std()
-    df_year = df[df.index.year >= year]
+    dfA['woy'] = dfA.index.weekofyear
+    weekly_clim = dfA.groupby('woy').mean()
+    weekly_std = dfA.groupby('woy').std()
+    df_year = dfA[dfA.index.year >= year]
     weekly_year = df_year.groupby('woy').mean()
     
     ax = weekly_clim.plot(linewidth=3, legend=None)
@@ -312,41 +314,101 @@ def plotTSDay(df, year, month, siteName):
         
     
     
-
 # =============================================================================
-# Find climatology
+# Plot climatology
+#    
+#    add default years
 # =============================================================================
-def findClimatology(df_all, year, method, siteName):
+def plotClimatology(df, year, siteName, method = 'doy'):
+    
+    dfC = df
     
     if method == 'doy':
-        df_all[method] = df_all.index.dayofyear
-    elif method == 'woy':
-        df_all[method] = df_all.index.weekofyear
+         dfC[method] = dfC.index.dayofyear
+    if method == 'woy':
+        dfC[method] = dfC.index.weekofyear
     
-    daily_clim = df_all.groupby(method).mean() 
-    daily_std = df_all.groupby(method).std() 
-    df_year = df_all[df_all.index.year == year] # >
+    daily_clim = dfC.groupby(method).mean() 
+    daily_std = dfC.groupby(method).std() 
+    df_year = dfC[dfC.index.year == year] # >
     daily_year = df_year.groupby(method).mean()
 
+    #climatology curve
     ax = daily_clim.plot(linewidth=1, legend=None)
+    
+    #temp curve for inputted year
     daily_year.plot(ax=ax, linewidth=1)
+    
     plt.fill_between(daily_clim.index,
-                  np.squeeze(daily_clim.values+daily_std.values),
-                  np.squeeze(daily_clim.values-daily_std.values),
+                  np.squeeze(daily_clim.values+(daily_std.values*1)),
+                  np.squeeze(daily_clim.values-(daily_std.values*1)),
                   facecolor='steelblue',
                   interpolate=True ,
                   alpha=.3)
     
-    plt.rc('xtick', labelsize= 8)
-    plt.rc('ytick', labelsize= 8)
+    plt.rc('xtick', labelsize= 10)
+    plt.rc('ytick', labelsize= 10)
     plt.xlabel("Day of the Year")
     plt.ylabel("Temperature")
     
     plt.title('{} Temps for {}'.format(year, siteName))
     ax.legend(['Climatology', year])
-
+    
     plt.show()
-        
+    
+    
+    
+    #first recorded day of the inputted year
+    indexDY = daily_year.index.values[0]
+    
+    #one standard deviation away from the daily_clim value 
+    lowerBound = daily_clim.values - (daily_std.values)
+    upperBound = daily_clim.values - (daily_std.values)
+    
+    #subsets bounds so that tjey're the same length as daily_year
+    lowerBound = lowerBound[indexDY - 1:]
+    upperBound = upperBound[indexDY - 1:]
+    
+    
+    upwellDates = []
+    
+    #when daily temp is less than the lower bound
+    # for i in range(len(daily_year) - 1):
+    #     if daily_year.values[i] < lowerBound[i]:
+    #         upwellDates.append(daily_year.index.values[i])
+           
+    #when daily temp is decreasing        
+    for i in range(len(daily_year) - 1):
+        if daily_year.values[i] > daily_year.values[i + 1]:
+            upwellDates.append(daily_year.index.values[i])
+    
+    return upwellDates
+    
+
+    
+       
+# =============================================================================
+# Derivative plot  
+# =============================================================================
+def plotDerivative(df, year, month, siteName):
+    dfD = df[df.index.year == year]
+    dfD = dfD[dfD.index.month == month]
+    
+    dfD = dfD.resample('12H').mean()
+    
+    dx = dfD.diff()
+    dt = dfD.index.to_series().diff().dt.seconds/3600
+    
+    dxdt = dx['temperature']/dt
+    
+    dxdt.plot()
+    plt.xlabel("Day of the month")
+    plt.ylabel("delta temp/delta time")
+    plt.title("Derivative of temp {}".format(siteName))
+    plt.show()
+    
+       
+
 # =============================================================================
 # Takes in a dataframe, the dataframe with header info, and the site name
 # and converts to a netCDF file.
