@@ -17,7 +17,7 @@ plt.rc('font', **font)
 
     
 #makes list of every file in ComfortCove folder
-fileList = hl_modules.getFileList("ArnoldsCove")
+fileList = hl_modules.getFileList("ComfortCove")
 
 #reads the rpf files listed in fileList
 df_all = hl_modules.readrpf(fileList)
@@ -44,7 +44,7 @@ df_monthly = df_all.resample('M').mean()
 
 
 # plots monthly anomalies for June-July
-hl_modules.plotAnomalies(df_monthly, 6,7, "ComfortCove")
+#hl_modules.plotAnomalies(df_monthly, 6,7, "ComfortCove")
 
 
 
@@ -59,32 +59,22 @@ hl_modules.plotAnomalies(df_monthly, 6,7, "ComfortCove")
 
 #hl_modules.plotTSMonth(df_monthly, 7, 7, "ComfortCove")
 
-hl_modules.plotTSMonth(df_monthly, 8, 8, "ComfortCove")
+#hl_modules.plotTSMonth(df_monthly, 8, 8, "ComfortCove")
 
 
 #time series for everyday out of a certain month
-hl_modules.plotTSDay(df_all, 1997, 6, "comfort cove")
+#hl_modules.plotTSDay(df_all, 1997, 6, "comfort cove")
 
 
 #creates an error when you run both at the same time 
-#hl_modules.findClimatology(df_all, 2007, 'woy', "Comfort Cove")
-hl_modules.findClimatology(df_all, 2008, 'doy', "Comfort Cove")
+#hl_modules.findClimatology(df_all, 2007, "Comfort Cove", 'woy')
+print(hl_modules.plotClimatology(df_all, 2007, "Comfort Cove"))
 
 
+
+#hl_modules.plotDerivative(df_all, 2007, 7, "ComfortCove")
 
 # netcdf
 
 #print(hl_modules.convertNetCDF(df_all, headerInfo, "ComfortCove"))
-
-
-# dfY = df_all[df_all.index.year == 1989]
-# dfM = dfY[(dfY.index.month>= 6) & (dfY.index.month<= 7)]
-# dfM = dfM.resample('6H').mean()
-# sns.lineplot(data=dfM, palette="tab10", linewidth= 1).set(title = 'Time Series')
-
-
-
-
-
-
 
