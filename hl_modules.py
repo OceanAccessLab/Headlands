@@ -8,11 +8,12 @@ Modules for headlands project:
     6. Plot anomalies
     7. Plot monthly time series
     8. Plot daily time series
-    9. Plot climatology and upwells
-    10. Plot derivative curve
-    11. Write to netCDFk
+    9. Plot climatology 
+    10. Plot/find upwells
+    11. Plot derivative curve
+    12. Write to netCDFk
 
-@author: giuliabronzi
+
 """
 
 import os
@@ -332,20 +333,26 @@ def plotClimatology(df, year, siteName, method = 'doy'):
     daily_std = dfC.groupby(method).std() 
     df_year = dfC[dfC.index.year == year] # >
     daily_year = df_year.groupby(method).mean()
+    
 
-    #climatology curve
+    #climatology time series
     ax = daily_clim.plot(linewidth=1, legend=None)
     
-    #temp curve for inputted year
+    #time series for inputted year
     daily_year.plot(ax=ax, linewidth=1)
+
+    #one standard deviation away from the daily_clim value
+    lowerBound = daily_clim.values - (daily_std.values)*0.5
+    upperBound = daily_clim.values + (daily_std.values)*0.5
     
     plt.fill_between(daily_clim.index,
-                  np.squeeze(daily_clim.values+(daily_std.values*1)),
-                  np.squeeze(daily_clim.values-(daily_std.values*1)),
+                  np.squeeze(upperBound),
+                  np.squeeze(lowerBound),
                   facecolor='steelblue',
                   interpolate=True ,
                   alpha=.3)
     
+    plt.grid()
     plt.rc('xtick', labelsize= 10)
     plt.rc('ytick', labelsize= 10)
     plt.xlabel("Day of the Year")
@@ -359,34 +366,66 @@ def plotClimatology(df, year, siteName, method = 'doy'):
     
     
     #first recorded day of the inputted year
-    indexDY = daily_year.index.values[0]
+    #indexDY = daily_year.index.values[0]
     
-    #one standard deviation away from the daily_clim value 
-    lowerBound = daily_clim.values - (daily_std.values)
-    upperBound = daily_clim.values - (daily_std.values)
     
-    #subsets bounds so that tjey're the same length as daily_year
-    lowerBound = lowerBound[indexDY - 1:]
-    upperBound = upperBound[indexDY - 1:]
+    # #subsets bounds so that tjey're the same length as daily_year
+    # lowerBound = lowerBound[indexDY - 1:]
+    # upperBound = upperBound[indexDY - 1:]
     
     
     upwellDates = []
     
-    #when daily temp is less than the lower bound
-    # for i in range(len(daily_year) - 1):
-    #     if daily_year.values[i] < lowerBound[i]:
-    #         upwellDates.append(daily_year.index.values[i])
-           
-    #when daily temp is decreasing        
-    for i in range(len(daily_year) - 1):
-        if daily_year.values[i] > daily_year.values[i + 1]:
-            upwellDates.append(daily_year.index.values[i])
+    
     
     return upwellDates
     
+# =============================================================================
+# finding upwelling
+# =============================================================================
+def findUpwells(df, year, siteName):
+    dfU = df
+
+    dfU['doy'] = dfU.index.dayofyear
+
+    df_year = dfU[dfU.index.year == year] # >
+    daily_year = df_year.groupby('doy').mean()
+    
+    #smooths daily_year
+    rolledMean = daily_year.rolling(30, center = True).mean()
+    rolledStd = daily_year.rolling(30, center = True).std()
 
     
-       
+    #plots rolled mean of daily_year
+    plt.plot(rolledMean)
+
+    #one std away from rolled mean 
+    lowerBound = rolledMean.values - (rolledStd.values)*0.75
+    upperBound = rolledMean.values + (rolledStd.values)*0.75
+    
+    #plots std of rolled mean of daily year
+    plt.fill_between(rolledMean.index, np.squeeze(upperBound),
+                  np.squeeze(lowerBound),facecolor='steelblue',
+                  interpolate=True, alpha=.3)
+    
+    plt.plot(daily_year)
+    
+    plt.grid()
+    plt.rc('xtick', labelsize= 10)
+    plt.rc('ytick', labelsize= 10)
+    plt.xlabel("Day of the Year")
+    plt.ylabel("Temperature")
+    
+    #plt.title('{} Temps for {}'.format(year, siteName))
+    #plt.legend(['Rolled Mean', year])
+    
+    plt.show()
+    
+    
+    
+    
+    
+
 # =============================================================================
 # Derivative plot  
 # =============================================================================
