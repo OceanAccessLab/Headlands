@@ -49,16 +49,7 @@ df_monthly = df_all.resample('M').mean()
 
 # time series plots for summer months 
 #hl_modules.plotTSMonth(df_monthly, 6, 8, "ComfortCove")
-
-#hl_modules.plotTSMonth(df_monthly, 6, 7, "ComfortCove")
-
-#hl_modules.plotTSMonth(df_monthly, 7, 8, "ComfortCove")
-
-#hl_modules.plotTSMonth(df_monthly, 6, 6, "ComfortCove")
-
 #hl_modules.plotTSMonth(df_monthly, 7, 7, "ComfortCove")
-
-#hl_modules.plotTSMonth(df_monthly, 8, 8, "ComfortCove")
 
 
 #time series for everyday out of a certain month
@@ -70,13 +61,14 @@ df_monthly = df_all.resample('M').mean()
 hl_modules.plotClimatology(df_all, 2007, "Comfort Cove")
 
 
-hl_modules.findUpwells(df_all, 2007, "comfort cove")
+hl_modules.findUpwells(df_all, 2007, "Comfort Cove")
 
 
 
 #hl_modules.plotDerivative(df_all, 2007, 7, "ComfortCove")
 
-# netcdf
 
+
+# netcdf
 #print(hl_modules.convertNetCDF(df_all, headerInfo, "ComfortCove"))
 
