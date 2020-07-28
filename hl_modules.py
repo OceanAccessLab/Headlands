@@ -383,12 +383,12 @@ def plotClimatology(df, year, siteName, method = 'doy'):
 # =============================================================================
 # finding upwelling
 # =============================================================================
-def findUpwells(df, year, siteName):
+def findUpwells(df, year, siteName, threshold = 0.5):
     dfU = df
 
     dfU['doy'] = dfU.index.dayofyear
 
-    df_year = dfU[dfU.index.year == year] # >
+    df_year = dfU[dfU.index.year == year]
     daily_year = df_year.groupby('doy').mean()
     
     #smooths daily_year
@@ -400,8 +400,8 @@ def findUpwells(df, year, siteName):
     plt.plot(rolledMean)
 
     #one std away from rolled mean 
-    lowerBound = rolledMean.values - (rolledStd.values)*0.75
-    upperBound = rolledMean.values + (rolledStd.values)*0.75
+    lowerBound = rolledMean.values - (rolledStd.values)*threshold
+    upperBound = rolledMean.values + (rolledStd.values)*threshold
     
     #plots std of rolled mean of daily year
     plt.fill_between(rolledMean.index, np.squeeze(upperBound),
@@ -416,13 +416,19 @@ def findUpwells(df, year, siteName):
     plt.xlabel("Day of the Year")
     plt.ylabel("Temperature")
     
-    #plt.title('{} Temps for {}'.format(year, siteName))
+    plt.title('Upwells for {} {}'.format(siteName, year))
     #plt.legend(['Rolled Mean', year])
     
     plt.show()
     
     
+    upwellDates = []
+    for i in range(len(daily_year)-1):
+        if(daily_year.values[i] < lowerBound[i]):
+            upwellDates.append(daily_year.index.values[i])
     
+    
+    print(upwellDates)
     
     
 
