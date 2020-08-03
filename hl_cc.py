@@ -2,7 +2,6 @@
 data in : /home/cyrf0006/data/Headlands/
 process in : /home/cyrf0006/AZMP/Headlands
 
-
 '''
 
 import matplotlib.pyplot as plt
@@ -58,7 +57,7 @@ df_monthly = df_all.resample('M').mean()
 
 #creates an error when you run both at the same time 
 #hl_modules.findClimatology(df_all, 2007, "Comfort Cove", 'woy')
-hl_modules.plotClimatology(df_all, 2007, "Comfort Cove")
+#hl_modules.plotClimatology(df_all, 2007, "Comfort Cove")
 
 
 hl_modules.findUpwells(df_all, 2007, "Comfort Cove")
