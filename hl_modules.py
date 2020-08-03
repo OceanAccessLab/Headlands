@@ -24,6 +24,7 @@ import matplotlib.pyplot as plt
 import xarray
 import calendar as cal
 import seaborn as sns
+import copy
 
 
 # =============================================================================
@@ -395,20 +396,33 @@ def findUpwells(df, year, siteName, threshold = 0.5):
     rolledMean = daily_year.rolling(30, center = True).mean()
     rolledStd = daily_year.rolling(30, center = True).std()
 
+    #one std away from rolled mean 
+    lowerBound = rolledMean.values - (rolledStd.values)*threshold
+    upperBound = rolledMean.values + (rolledStd.values)*threshold
+
+    #deep copy so that daily_year values arent affected
+    upwellDates = copy.deepcopy(daily_year)
+    
+    #all values above the lower bound changed to NaN
+    for i in range(len(upwellDates)):
+        if((upwellDates.values[i] >= lowerBound[i]) | (np.isnan(lowerBound[i]))):
+            upwellDates.values[i] = np.nan
+    
     
     #plots rolled mean of daily_year
     plt.plot(rolledMean)
 
-    #one std away from rolled mean 
-    lowerBound = rolledMean.values - (rolledStd.values)*threshold
-    upperBound = rolledMean.values + (rolledStd.values)*threshold
     
     #plots std of rolled mean of daily year
     plt.fill_between(rolledMean.index, np.squeeze(upperBound),
                   np.squeeze(lowerBound),facecolor='steelblue',
                   interpolate=True, alpha=.3)
     
+    #plots daily temp average
     plt.plot(daily_year)
+    
+    #plots upwells
+    plt.plot(upwellDates, color = 'black')
     
     plt.grid()
     plt.rc('xtick', labelsize= 10)
@@ -420,15 +434,6 @@ def findUpwells(df, year, siteName, threshold = 0.5):
     #plt.legend(['Rolled Mean', year])
     
     plt.show()
-    
-    
-    upwellDates = []
-    for i in range(len(daily_year)-1):
-        if(daily_year.values[i] < lowerBound[i]):
-            upwellDates.append(daily_year.index.values[i])
-    
-    
-    print(upwellDates)
     
     
 
