@@ -10,8 +10,9 @@ Modules for headlands project:
     8. Plot daily time series
     9. Plot climatology 
     10. Plot/find upwells
-    11. Plot derivative curve
-    12. Write to netCDFk
+    12. Upwell table
+    12. Plot derivative curve
+    13. Write to netCDFk
 
 
 """
@@ -384,7 +385,7 @@ def plotClimatology(df, year, siteName, method = 'doy'):
 # =============================================================================
 # finding upwelling
 # =============================================================================
-def findUpwells(df, year, siteName, threshold = 0.5):
+def plotUpwells(df, year, siteName, threshold = 0.5):
     dfU = df
 
     dfU['doy'] = dfU.index.dayofyear
@@ -436,6 +437,40 @@ def findUpwells(df, year, siteName, threshold = 0.5):
     plt.show()
     
     
+    return upwellDates
+
+
+# =============================================================================
+# prints table with upwell info
+# =============================================================================
+def upwellTable(upwellDates):
+    start = []
+    end = []
+    duration = []
+    count = 0
+    i = 0
+    
+    while i < len(upwellDates):
+        if not np.isnan(upwellDates.values[i][0]):
+            start.append(upwellDates.index.values[i])
+            
+            while(not np.isnan(upwellDates.values[i][0])):
+                i += 1 
+                count += 1
+            
+            end.append(upwellDates.index.values[i-1])
+            duration.append(count)
+            count = 0
+            
+        i += 1
+       
+        
+    data = {'startDate': start, 'endDate': end, 'duration': duration}
+    upwells = pd.DataFrame(data, 
+                           columns = ['startDate', 'endDate', 'duration'])
+   
+    
+    return upwells
 
 # =============================================================================
 # Derivative plot  
