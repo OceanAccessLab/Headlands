@@ -60,7 +60,9 @@ df_monthly = df_all.resample('M').mean()
 #hl_modules.plotClimatology(df_all, 2007, "Comfort Cove")
 
 
-hl_modules.findUpwells(df_all, 2007, "Comfort Cove")
+upwellDates = hl_modules.plotUpwells(df_all, 2007, "Comfort Cove")
+
+print(hl_modules.upwellTable(upwellDates))
 
 
 
