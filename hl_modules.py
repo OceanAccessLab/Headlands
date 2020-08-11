@@ -1,19 +1,20 @@
 """
-Modules for headlands project:
+Modules for Headlands project:
     1. Get file list from a folder
     2. Read .rpf files
     3. Remove duplicates
     4. Extract header info
     5. Plot annual curve
     6. Plot anomalies
-    7. Plot monthly time series
+    7. Plot monthly average with regression line
     8. Plot daily time series
     9. Plot climatology 
-    10. Plot/find upwells
-    12. Upwell table
-    12. Plot derivative curve
-    13. Write to netCDFk
-
+    10. Get upwell dates and plot upwells
+    11. Get upwell dataframe
+    12. Convert upwell dataframe to csv file
+    13. Plot derivative curve
+    14. Convert to netCDF file
+    
 
 """
 
@@ -39,7 +40,7 @@ def getFileList(folderName):
     if getpass.getuser() == 'cyrf0006':
         files_path = '~/data/Headlands_Trimmed/'
     else:
-        files_path = '~/Desktop'
+        files_path = '~/Desktop/'
     # Generate the list
     infiles = folderName + '.list'
     os.system('ls ' + os.path.join(files_path, folderName + '/*.rpf') + ' > ' + infiles)
@@ -49,11 +50,11 @@ def getFileList(folderName):
     return filelist
  
 # =============================================================================
-# Takes in a list of file names and extracts the data, creates an array of 
-# dataframes (one df for each file) and then concatenates the array into one
-# dataframe. 
+# Takes in the list of file names returned from getFileList() and extracts the
+# data, creates an array of dataframes (one df for each file) and then 
+# concatenates the array into one dataframe.
 #
-# Returns a dataframe containing all the data from a site.
+# Returns the dataframe 'df_all' containing all the data from a site.
 # =============================================================================
     
 def readrpf(filelist):     
@@ -79,10 +80,10 @@ def readrpf(filelist):
 
 
 # =============================================================================
-# Takes in a dataframe, finds average temp between any duplicates,
-# removes the duplicates, and returns the dataframe. 
+# Takes in the dataframe returned from readrpf(), finds the average temperature
+# between any duplicates, removes the duplicates, and returns a dataframe. 
 #
-# Returns a dataframe.
+# Returns the dataframe 'df'.
 # =============================================================================
 def removeDuplicates(df):
     
@@ -101,10 +102,11 @@ def removeDuplicates(df):
 
 
 # =============================================================================
-# Takes in a list of file names and creates a dataframe containting all 
-# header information. Each row of the dataframe relates to one file. 
+# Takes in the list of file names returned from getFileList() and creates a 
+# dataframe containting all header information. Each row of the dataframe 
+# relates to one file. 
 #   
-# Returns a dataframe.
+# Returns the dataframe 'headersdf'.
 # =============================================================================
 def extractHeaders(filelist):
 
@@ -183,8 +185,8 @@ def extractHeaders(filelist):
 
 
 # =============================================================================
-# Takes in a dataframe and a year and produces a plot comparing the inputted
-# year with the average from 1989-2018.
+# Takes in the dataframe returned from readrpf() and a year, and produces a 
+# plot comparing the inputted year with the average temperature from 1989-2018.
 #
 # Plots graph. 
 # =============================================================================
@@ -223,23 +225,25 @@ def plotAnnualCurve(df, year, siteName):
     
 
 # =============================================================================
-# Plots the standard anomalies for a set of months. Takes in a dataframe (that has
-# has been resampled and averaged by month), and a number for the lower month 
+# Plots the standard anomalies for a set of months. Takes in the dataframe 
+# returned from readrpf(), and a number for the lower month 
 # bound and a number for the upper month bound (ie. for June - July, input 6 
 # and 7). 
-#
+# 
 # Plots graph.
 # =============================================================================
-def plotAnomalies(df_monthly, lowerMonthNum, upperMonthNum, siteName):
+def plotAnomalies(df_all, lowerMonthNum, upperMonthNum, siteName):
     
+    # monthly average
+    df_monthly = df_all.resample('M').mean()
+
     df_summer = df_monthly[(df_monthly.index.month>= lowerMonthNum) & 
                            (df_monthly.index.month<= upperMonthNum)]
     df_summer = df_summer.resample('As').mean()
     df_summer.index = df_summer.index.year
-    #df_summer.to_csv('comfort_cove_thermograph_1989-2017_June-July.csv')
     
     
-    ## ---- plot summer data in anomalies ---- ##
+    #calculates anomalies using the mean and std of df_summer
     anom = (df_summer - df_summer.mean()) / df_summer.std()
     df1 = anom[anom<0]
     df2 = anom[anom>0]
@@ -258,19 +262,22 @@ def plotAnomalies(df_monthly, lowerMonthNum, upperMonthNum, siteName):
     plt.grid()
     fig.set_size_inches(w=15,h=9)
     fig_name = '{}_anomalies.png'.format(siteName)
-    #plt.annotate('data source: NCDC/NOAA', xy=(.75, .01), xycoords='figure fraction', annotation_clip=False, FontSize=12)
     fig.savefig(fig_name, dpi=300)
     os.system('convert -trim ' + fig_name + ' ' + fig_name)
     plt.show()
     
     
 # =============================================================================
-# Plots time series and regression line for a set of months. Takes in a data
-# frame, the number of the lower and upper months, and the site name.  
+# Plots the average temperature and regression line for a set of months. Takes 
+# in the data frame returned from readrpf(), the number representing the lower
+# and upper months, and the site name.  
 #
 # Plots graph.
 # =============================================================================
-def plotTSMonth(df_monthly, lowerMonthNum, upperMonthNum, siteName):
+def plotMonthAverage(df_all, lowerMonthNum, upperMonthNum, siteName):
+    
+    # monthly average
+    df_monthly = df_all.resample('M').mean()
     
     #takes df_monthly and creates a new df between the given bounds
     df_series = df_monthly[(df_monthly.index.month>= lowerMonthNum) & 
@@ -284,7 +291,7 @@ def plotTSMonth(df_monthly, lowerMonthNum, upperMonthNum, siteName):
    
     plt.xlabel("Year")
     plt.ylabel(r'T ($^{\circ}C$)')
-    plt.title('{} time series ({}-{})'.format(siteName, 
+    plt.title('{} Regression Line ({}-{})'.format(siteName, 
                                               cal.month_name[lowerMonthNum],
                                                cal.month_name[upperMonthNum]))
     plt.grid()
@@ -292,9 +299,14 @@ def plotTSMonth(df_monthly, lowerMonthNum, upperMonthNum, siteName):
 
 
 # =============================================================================
-# plotting time series for one month out of a certain year 
+# Plots the time series for a given month and year, for the specified site.
+# Takes in the data frame returned from readrpf(), a year, a month, and a site 
+# name.
+#
+# Plots graph.
 # =============================================================================
-def plotTSDay(df, year, month, siteName):
+def plotDailyTS(df, year, month, siteName):
+    
     df_series = df[df.index.year == year]
     
     df_day = df_series[df_series.index.month == month]
@@ -314,13 +326,16 @@ def plotTSDay(df, year, month, siteName):
     
     plt.show()
  
-        
-    
-    
 # =============================================================================
-# Plot climatology
-#    
-#    add default years
+# Plots the climatology curve for a given site along with a time series
+# from a specific year. Takes in the dataframe returned from readrpf(), a 
+# year, a site name, and a method.
+#
+# The default method is 'doy', meaning the annual curve follows the day of the 
+# year. The other option is 'woy', where the annual curve follows the week of
+# the year.
+#
+# Plots graph.
 # =============================================================================
 def plotClimatology(df, year, siteName, method = 'doy'):
     
@@ -364,33 +379,26 @@ def plotClimatology(df, year, siteName, method = 'doy'):
     ax.legend(['Climatology', year])
     
     plt.show()
-    
-    
-    
-    #first recorded day of the inputted year
-    #indexDY = daily_year.index.values[0]
-    
-    
-    # #subsets bounds so that tjey're the same length as daily_year
-    # lowerBound = lowerBound[indexDY - 1:]
-    # upperBound = upperBound[indexDY - 1:]
-    
-    
-    upwellDates = []
-    
-    
-    
-    return upwellDates
+
     
 # =============================================================================
-# finding upwelling
+# Takes in the dataframe returned from readrpf(), a year, a site name, and 
+# a threshold (default of 0.5) for calculating the lower and upper bounds of 
+# the rolled mean curve. 
+#
+# The default for 'plot' is true. When it is true it will produce a plot  
+# showing the rolled mean temperature and the daily temperature for the 
+# specified year. A temperature will be highlighted as an upwell if it is 
+# below the (std*threshold) of the rolled mean. 
+#
+# Returns the dataframe 'upwellDates', with the dates and temperatures of 
+# all upwells from the specified year and site. 
 # =============================================================================
-def plotUpwells(df, year, siteName, threshold = 0.5):
-    dfU = df
+def getUpwellDates(df, year, siteName, threshold = 0.5, plot = True):
 
-    dfU['doy'] = dfU.index.dayofyear
+    df['doy'] = df.index.dayofyear
 
-    df_year = dfU[dfU.index.year == year]
+    df_year = df[df.index.year == year]
     daily_year = df_year.groupby('doy').mean()
     
     #smooths daily_year
@@ -400,50 +408,57 @@ def plotUpwells(df, year, siteName, threshold = 0.5):
     #one std away from rolled mean 
     lowerBound = rolledMean.values - (rolledStd.values)*threshold
     upperBound = rolledMean.values + (rolledStd.values)*threshold
+    
 
     #deep copy so that daily_year values arent affected
     upwellDates = copy.deepcopy(daily_year)
+    
     
     #all values above the lower bound changed to NaN
     for i in range(len(upwellDates)):
         if((upwellDates.values[i] >= lowerBound[i]) | (np.isnan(lowerBound[i]))):
             upwellDates.values[i] = np.nan
-    
-    
-    #plots rolled mean of daily_year
-    plt.plot(rolledMean)
 
+
+
+    if(plot == True):
+        #plots rolled mean
+        plt.plot(rolledMean)
     
-    #plots std of rolled mean of daily year
-    plt.fill_between(rolledMean.index, np.squeeze(upperBound),
-                  np.squeeze(lowerBound),facecolor='steelblue',
-                  interpolate=True, alpha=.3)
-    
-    #plots daily temp average
-    plt.plot(daily_year)
-    
-    #plots upwells
-    plt.plot(upwellDates, color = 'black')
-    
-    plt.grid()
-    plt.rc('xtick', labelsize= 10)
-    plt.rc('ytick', labelsize= 10)
-    plt.xlabel("Day of the Year")
-    plt.ylabel("Temperature")
-    
-    plt.title('Upwells for {} {}'.format(siteName, year))
-    #plt.legend(['Rolled Mean', year])
-    
-    plt.show()
-    
-    
+        #plots std of rolled mean of daily year
+        plt.fill_between(rolledMean.index, np.squeeze(upperBound),
+                      np.squeeze(lowerBound),facecolor='steelblue',
+                      interpolate=True, alpha=.3)
+        
+        #plots daily temp average
+        plt.plot(daily_year)
+        
+        #plots upwells
+        plt.plot(upwellDates, color = 'black')
+        
+        plt.grid()
+        plt.rc('xtick', labelsize= 10)
+        plt.rc('ytick', labelsize= 10)
+        plt.xlabel("Day of the Year")
+        plt.ylabel("Temperature")
+        
+        plt.title('Upwells for {} {}'.format(siteName, year))
+        #plt.legend(['Rolled Mean', year])
+        
+        plt.show()
+
+
     return upwellDates
 
 
 # =============================================================================
-# prints table with upwell info
+# Takes in the dataframe returned from getUpwellDates() and creates
+# a dataframe with one row for each upwell. There are three columns, one for 
+# start date, end date, and duration of the upwell. 
+#
+# Returns the dataframe 'upwell'.
 # =============================================================================
-def upwellTable(upwellDates):
+def upwellDF(upwellDates):
     start = []
     end = []
     duration = []
@@ -472,6 +487,31 @@ def upwellTable(upwellDates):
     
     return upwells
 
+
+# =============================================================================
+# Takes in the dataframe returned from readrpf() and a site name, and finds 
+# the upwell dates for every year of the specified site. It then creates a 
+# .csv file that has the start date, end date and duration of every upwell.
+#  
+# Creates a .csv file called 'upwells_siteName'. 
+# =============================================================================
+def upwellsToCSV(df_all, siteName):
+    
+    #array of dataframes, one df for each year 
+    dfArray = []
+    
+    for year in range(1989,2019):
+        upwellDates = getUpwellDates(df_all, year, siteName, 
+                                     threshold = 0.5, plot = False)
+        upwell = upwellDF(upwellDates)
+        dfArray.append(upwell)
+        
+    allUpwells = pd.concat(dfArray, axis = 0)
+    
+    allUpwells.to_csv(r'upwells_{}.csv'.format(siteName), index=False)
+    
+    
+    
 # =============================================================================
 # Derivative plot  
 # =============================================================================
@@ -493,12 +533,11 @@ def plotDerivative(df, year, month, siteName):
     plt.show()
     
        
-
 # =============================================================================
-# Takes in a dataframe, the dataframe with header info, and the site name
-# and converts to a netCDF file.
+# Takes in the dataframe returned from readrpf(), the dataframe returned from 
+# extractHeaders(), and a site name, and converts the data to a netCDF file.
 #
-# Returns a dataset and creates a .nc file.
+# Returns the dataset 'xr' and creates a .nc file called siteName_netCDF.nc'.
 # =============================================================================
 def convertNetCDF(df_all, headersdf, siteName):
     
