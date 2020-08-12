@@ -27,7 +27,8 @@ import xarray
 import calendar as cal
 import seaborn as sns
 import copy
-
+from datetime import date
+from dateutil.relativedelta import relativedelta
 
 # =============================================================================
 # Takes in a folder name and creates a list of each file name.
@@ -419,7 +420,7 @@ def getUpwellDates(df, year, siteName, threshold = 0.5, plot = True):
         if((upwellDates.values[i] >= lowerBound[i]) | (np.isnan(lowerBound[i]))):
             upwellDates.values[i] = np.nan
 
-
+    
 
     if(plot == True):
         #plots rolled mean
@@ -446,8 +447,19 @@ def getUpwellDates(df, year, siteName, threshold = 0.5, plot = True):
         #plt.legend(['Rolled Mean', year])
         
         plt.show()
+        
+        
+    #after we make the plot we convert the doy index to an absolute date
+    #resets index so we can edit 'doy' as a column
+    upwellDates = upwellDates.reset_index()
+    
+    #converts 'doy' to yyyy-mm-dd
+    upwellDates.index = pd.DatetimeIndex(upwellDates['doy'].apply(lambda x: date(year, 1, 1) + relativedelta(days=int(x)-1)))
+    
+    #drops the doy column
+    upwellDates = upwellDates.drop(columns = ['doy'])
 
-
+    #index is yyyy-mm-dd, column for temperatures
     return upwellDates
 
 
@@ -456,7 +468,7 @@ def getUpwellDates(df, year, siteName, threshold = 0.5, plot = True):
 # a dataframe with one row for each upwell. There are three columns, one for 
 # start date, end date, and duration of the upwell. 
 #
-# Returns the dataframe 'upwell'.
+# Returns the dataframe 'upwells'.
 # =============================================================================
 def upwellDF(upwellDates):
     start = []
@@ -509,7 +521,6 @@ def upwellsToCSV(df_all, siteName):
     allUpwells = pd.concat(dfArray, axis = 0)
     
     allUpwells.to_csv(r'upwells_{}.csv'.format(siteName), index=False)
-    
     
     
 # =============================================================================
