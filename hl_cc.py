@@ -52,14 +52,14 @@ headerInfo = hl_modules.extractHeaders(fileList)
 
 
 
-upwellDates = hl_modules.getUpwellDates(df_all, 2017, "Comfort Cove")
-print(hl_modules.upwellDF(upwellDates))
+# upwellDates = hl_modules.getUpwellDates(df_all, 2018, "Comfort Cove")
+# print(hl_modules.upwellDF(upwellDates))
 
 
-#'Lumsden/5m', 'Lumsden/15m', 'Melrose/5m', 'Melrose/15m',, 
 
 siteNames = ['ArnoldsCove', 'BristolsHope', 'ComfortCove', 'Hampden', 
-         'OldBonaventure', 'StockCove', 'UpperGullies', 'Winterton']
+             'Lumsden5m', 'Lumsden15m', 'Melrose5m', 'Melrose15m',
+             'OldBonaventure', 'StockCove', 'UpperGullies', 'Winterton']
 
 for site in siteNames:
     fileList = hl_modules.getFileList(site)
