@@ -15,7 +15,6 @@ Modules for Headlands project:
     13. Plot derivative curve
     14. Convert to netCDF file
     
-
 """
 
 import os
@@ -160,27 +159,32 @@ def extractHeaders(filelist):
         
         
     headers = {'Station': station,
-                'Site Name': siteName,
-                'Start Date': startDate,
-                'Start Time': startTime,
-                'End Date': endDate,
-                'End Time': endTime,
+                'SiteName': siteName,
+                'StartDate': startDate,
+                'StartTime': startTime,
+                'EndDate': endDate,
+                'EndTime': endTime,
                 'Latitude': latitude,
                 'Longitude': longitude,
-                'Inst Type': instType,
-                'Serial Number': serialNumber,
-                'Water Depth': waterDepth,
-                'Inst Depth': instDepth,
-                'Sampling Interval': samplingInterval,
-                'File Name': fileName }
+                'InstType': instType,
+                'SerialNumber': serialNumber,
+                'WaterDepth': waterDepth,
+                'InstDepth': instDepth,
+                'SamplingInterval': samplingInterval,
+                'FileName': fileName }
     
-    colNames = ['Station', 'Site Name', 'Start Date', 'Start Time', 'End Date', 
-                'End Time','Latitude', 'Longitude',  'Inst Type', 'Serial Number',
-                'Water Depth','Inst Depth', 'Sampling Interval', 'File Name']
+    colNames = ['Station', 'SiteName', 'StartDate', 'StartTime', 'EndDate', 
+                'EndTime','Latitude', 'Longitude',  'InstType', 'SerialNumber',
+                'WaterDepth','InstDepth', 'SamplingInterval', 'FileName']
     
     #creates new dataframe, each column is a component of the header
     #each row represents an individual file
     headersdf = pd.DataFrame(headers, columns = colNames)
+    
+    #sorts by start date and end date
+    headersdf = headersdf.sort_values(by=['StartDate', 'EndDate'])
+    #reorders the index
+    headersdf = headersdf.reset_index(drop=True)
 
     return headersdf
 
@@ -215,12 +219,9 @@ def plotAnnualCurve(df, year, siteName):
     plt.xlim([0,53])
     plt.ylim([-2,18])
     plt.grid()
-    plt.legend(['1989-2018 average', year])
+    plt.legend(['1989-2019 average', year])
     fig = ax.get_figure()
     fig.set_size_inches(w=12,h=8)
-    fig_name = '{}_T.png'.format(siteName)   
-    fig.savefig(fig_name, dpi=200)
-    os.system('convert -trim ' + fig_name + ' ' + fig_name)
     
     plt.show()
     
@@ -262,9 +263,6 @@ def plotAnomalies(df_all, lowerMonthNum, upperMonthNum, siteName):
                                               cal.month_name[upperMonthNum])) 
     plt.grid()
     fig.set_size_inches(w=15,h=9)
-    fig_name = '{}_anomalies.png'.format(siteName)
-    fig.savefig(fig_name, dpi=300)
-    os.system('convert -trim ' + fig_name + ' ' + fig_name)
     plt.show()
     
     
@@ -316,9 +314,8 @@ def plotDailyTS(df, year, month, siteName):
     
     plt.plot(df_day.index, df_day['temperature'])
     
-    #ax.set_xticklabels(df.index.day)
     
-    plt.rc('xtick', labelsize= 5)
+    plt.rc('xtick', labelsize= 8)
     plt.xlabel("Day of the month")
     plt.ylabel("Temperature")
     
@@ -359,7 +356,7 @@ def plotClimatology(df, year, siteName, method = 'doy'):
     #time series for inputted year
     daily_year.plot(ax=ax, linewidth=1)
 
-    #one standard deviation away from the daily_clim value
+    #half of one standard deviation away from the daily_clim value
     lowerBound = daily_clim.values - (daily_std.values)*0.5
     upperBound = daily_clim.values + (daily_std.values)*0.5
     
@@ -550,33 +547,39 @@ def plotDerivative(df, year, month, siteName):
 #
 # Returns the dataset 'xr' and creates a .nc file called siteName_netCDF.nc'.
 # =============================================================================
-def convertNetCDF(df_all, headersdf, siteName):
+def convertNetCDF(df_all, headersdf, site):
     
     #converting dataframe to dataset
-    #dimension = datetime variable
-    #data variable = temperature
+    #dimension = datetime variable, data variable = temperature
     xr = xarray.Dataset.from_dataframe(df_all)
     
     #attribute values
     #creates errors when attribute is a list, so need to convert to string
     station = str(headersdf['Station'].unique())
-    lat = str(headersdf['Latitude'].unique())
-    long = str(headersdf['Longitude'].unique())
-    startDate = str(headersdf['Start Date'].unique())
-    endDate = str(headersdf['End Date'].unique())
-    instDepth = str(headersdf['Inst Depth'].unique())
-    fileName = str(headersdf['File Name'].unique())
+    siteName = str(headersdf['SiteName'].unique())
+    start = str((headersdf['StartDate'] + ' ' + headersdf['StartTime']).values)
+    end = str((headersdf['EndDate'] + ' ' + headersdf['EndTime']).values)
+    latitude = str(headersdf['Latitude'].unique())
+    longitude = str(headersdf['Longitude'].unique())
+    instType = str(headersdf['InstType'].unique())
+    serialNumber = str(headersdf['SerialNumber'].unique())
+    waterDepth = str(headersdf['WaterDepth'].unique())
+    instDepth = str(headersdf['InstDepth'].unique())
+    samplingInterval = str(headersdf['SamplingInterval'].unique())
+    fileName = str(headersdf['FileName'].unique())
+    
     
     #sets the attributes
-    xr.attrs={'Station': station,'Latitude': lat, 'Longitude': long,
-              'Start Date': startDate, 'End Date': endDate, 'Inst Depth':instDepth,
-              'File Name': fileName}
+    xr.attrs={'Station': station, 'SiteName': siteName, 'Start': start,
+              'End': end,'Latitude': latitude,'Longitude': longitude, 
+              'InstType': instType,'SerialNumber': serialNumber, 
+              'WaterDepth': waterDepth,'InstDepth': instDepth,
+              'SamplingInterval': samplingInterval,'FileName': fileName }
     
-    #sets characteristics to data variable
-    xr['temperature'].attrs={'units':'Celcius', 'long_name':'Temperature'}
     
-    #converts to netCDF file where file name = 'siteName_netCDF.nc'
-    xr.to_netcdf('{}_netCDF.nc'.format(siteName))
+    xr['temperature'].attrs={'units':'Celcius'}
     
-    return xr
-
+    
+    #converts the dataset 'xr' to a netCDF file
+    xr.to_netcdf('{}_netCDF.nc'.format(site))
+    
