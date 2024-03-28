@@ -32,14 +32,12 @@ January/February 2022
 import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
-import datetime
+#import datetime
+from datetime import datetime
+from datetime import date
 import os
 import xarray as xr
 import copy
-import seaborn as sns
-from datetime import date
-from scipy.stats import linregress
-from dateutil.relativedelta import relativedelta
 import netCDF4 as nc
 import time as tt
 
@@ -47,8 +45,8 @@ import os
 import hl_modules as hl 
 
 ## ---- Input params to be put in function ---- ##
-#site = 'Arnolds_Cove'; site_tmp = 'Arnold'
-site = 'Bristols_Hope'; site_tmp = 'Bristol'
+site = 'Arnolds_Cove'; site_tmp = 'Arnold'
+#site = 'Bristols_Hope'; site_tmp = 'Bristol'
 #site = 'Comfort_Cove'; site_tmp = 'Comfort'
 #site = 'Hampden'; site_tmp = 'Hampden'
 #site = 'Lumsden_5m'; site_tmp = 'Lumsden.*\ 5m'
@@ -60,7 +58,7 @@ site = 'Bristols_Hope'; site_tmp = 'Bristol'
 #site = 'Upper_Gullies'; site_tmp = 'Foxtrap'
 #site = 'Winterton'; site_tmp = 'Winterton'
 
-years_to_append = [2019, 2020, 2021] 
+years_to_append = [2019, 2020, 2021, 2022, 2023] 
 
 
 ## ---- Read .rpf files + clean ---- #
@@ -76,17 +74,20 @@ for year in years_to_append:
     #if file_tmp:
     for file_tmp in files_tmp:
         if file_tmp:
-            df_tmp = pd.read_csv(os.path.join(path_tmp, file_tmp), header=7, names=['date','time','temperature'], parse_dates={'datetime': ['date', 'time']}, index_col='datetime')
-            df_update = df_update.append(df_tmp, sort=True)
+            #df_tmp = pd.read_csv(os.path.join(path_tmp, file_tmp), header=7, names=['date','time','temperature'], parse_dates={'datetime': ['date', 'time']}, index_col='datetime', encoding_errors='ignore')
+            df_tmp = pd.read_csv(os.path.join(path_tmp, file_tmp), header=7, names=['date','time','temperature'], encoding_errors='ignore')
+            # Parse date/time
+            df_tmp['datetime'] = pd.to_datetime(df_tmp['date'] + ' ' + df_tmp['time'])
+            df_tmp.set_index('datetime', inplace=True)
+            df_tmp.drop(columns=['date', 'time'], inplace=True)
+            df_update = pd.concat([df_update, df_tmp]).sort_index()
     
-# Just in case, resample
-#df_update = df_update.resample('H').mean()
-
 # update historical data
-df_all = df_all.append(df_update)
+#df_all = df_all.append(df_update)
+df_all = pd.concat([df_all, df_update]).sort_index()
 
 # Remove duplicates by hourly average
-df = df_all.resample('H').mean()
+df = df_all.resample('h').mean()
 
 
 ## ---- get meta data and attribute values ---- ##
@@ -129,47 +130,57 @@ nc_out.references = 'https://azmp-nl.github.io/Headlands'
 nc_out.description = 'Headlands: Coastal temperature monitoring program in Newfoundland'
 nc_out.author = 'Frederic.Cyr@dfo-mpo.gc.ca'
 nc.history = 'Created ' + tt.ctime(tt.time())
-nc_out.comment = 'Just a trial at the moment, no distribution!'
+nc_out.principal_investigator = 'Frederic Cyr'
+nc_out.principal_investigator_email = 'frederic.cyr@dfo-mpo.gc.ca'
+nc_out.principal_investigator_url = 'http://www.dfo-mpo.gc.ca/'
 
 # Create dimensions
 time = nc_out.createDimension('time', None)
 level = nc_out.createDimension('level', len(instrument_depth))
+latitude = nc_out.createDimension('latitude', 1)
+longitude = nc_out.createDimension('longitude', 1)
+station = nc_out.createDimension('station', 1)
 
 # Create coordinate variables
 times = nc_out.createVariable('time', np.float64, ('time',))
 levels = nc_out.createVariable('level', np.int32, ('level',))
+longitudes = nc_out.createVariable('longitude', np.float32, ('longitude',))
+latitudes = nc_out.createVariable('latitude', np.float32, ('latitude',))
+stations = nc_out.createVariable('station', str, ('station',))
 
 # Create time variable (1-D)
 temp = nc_out.createVariable('temperature', np.float32, ('time', 'level'), zlib=True, fill_value=-9999)
 
 # Create level variables (0-D) | Should this be attributes?
-latitudes = nc_out.createVariable('latitude', np.float32, ('level'), zlib=True)
-longitudes = nc_out.createVariable('longitude', np.float32, ('level'), zlib=True)
-stations = nc_out.createVariable('station_name', np.str, ('level'), zlib=True)
-ID = nc_out.createVariable('station_ID', np.int32, ('level'), zlib=True)
+#latitudes = nc_out.createVariable('latitude', np.float32, ('level'), zlib=True)
+#longitudes = nc_out.createVariable('longitude', np.float32, ('level'), zlib=True)
+#stations = nc_out.createVariable('station_name', str, ('level'), zlib=True)
+#ID = nc_out.createVariable('station_ID', np.int32, ('level'), zlib=True)
 
 # Variable Attributes
 latitudes.units = 'degree_north'
 longitudes.units = 'degree_east'
 times.units = 'hours since 1900-01-01 00:00:00'
 times.calendar = 'gregorian'
+times.long_name = 'time of measurement'
 levels.units = 'm'
 levels.standard_name = "depth"
 levels.valid_min = 0
 temp.units = 'Celsius'
 temp.long_name = "Water Temperature" # (may be use to label plots)
 temp.standard_name = "sea_water_temperature"
+stations.ID = df_info.loc['station_number'].value
+stations.Name = station_name.value
 
 # Fill variables
-latitudes[:] = np.array(df_info.loc['station_lat'])
-longitudes[:] = np.array(df_info.loc['station_lon'])
-stations[:] = np.array(df_info.loc['station_short_name'])
-ID[:] = np.array(df_info.loc['station_number'])
 temp[:] = df.values
 
 # Fill dimensions
 times[:] = nc.date2num(df.index.to_pydatetime(), units = times.units, calendar = times.calendar)
 levels[:] = int(instrument_depth.value)
+latitudes[:] = np.array(df_info.loc['station_lat'])
+longitudes[:] = np.array(df_info.loc['station_lon'])
+stations[:] = np.array(df_info.loc['station_short_name'])
 
 # Close file
 nc_out.close()

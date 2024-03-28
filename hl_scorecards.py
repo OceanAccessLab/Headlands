@@ -86,7 +86,7 @@ std_anom['SD'] = df.loc['SD']
 std_anom.rename(columns={'MEAN': r'$\rm \overline{x}$', 'SD': r'sd'}, inplace=True)
 
 # Add Headlands index
-std_anom.at['Headlands index'] = std_anom.mean() 
+std_anom.loc['Headlands index'] = std_anom.mean() 
 std_anom.iloc[-1,-1]=np.nan
 std_anom.iloc[-1,-2]=np.nan  
 
@@ -139,7 +139,7 @@ the_table=ax.table(cellText=vals, rowLabels=std_anom.index, colLabels=year_list,
 the_table.auto_set_font_size(False)
 the_table.set_fontsize(12.5)
 table_props = the_table.properties()
-table_cells = table_props['child_artists']
+#table_cells = table_props['child_artists']
 last_columns = np.arange(vals.shape[1]-2, vals.shape[1]) # last columns
 for key, cell in the_table.get_celld().items():
     cell_text = cell.get_text().get_text()
@@ -152,7 +152,7 @@ for key, cell in the_table.get_celld().items():
         cell._text.set_color('lightgray')
     elif key[1] in last_columns:
          cell._text.set_color('darkslategray')
-    elif (np.float(cell_text) <= -1.5) | (np.float(cell_text) >= 1.5) :
+    elif (float(cell_text) <= -1.5) | (float(cell_text) >= 1.5) :
         cell._text.set_color('white')
 
     # index in bold

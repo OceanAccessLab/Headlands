@@ -80,13 +80,20 @@ def getFileList(folderName, pre_path='', post_path=''):
     
 def readrpf(filelist):     
     dfs = []
-    for fname in filelist: 
-        try: 
-            df = pd.read_csv(fname, sep='\s+',  
-                             parse_dates={'datetime': [0, 1]}, 
-                             header=16)
-            df = df.set_index('datetime')
-            df.columns = ['temperature']
+    for fname in filelist:
+        try:
+            df = pd.read_csv(fname, sep='\s+', header=16, names=['date','time','temperature'], encoding_errors='ignore')             
+            # Parse date/time
+            df['datetime'] = pd.to_datetime(df['date'] + ' ' + df['time'])
+            df.set_index('datetime', inplace=True)
+            df.drop(columns=['date', 'time'], inplace=True)
+
+            ## Deprecated::
+            #df = pd.read_csv(fname, sep='\s+',  
+            #                 parse_dates={'datetime': [0, 1]}, 
+            #                 header=16)
+            #df = df.set_index('datetime')
+            #df.columns = ['temperature']
             df = df.replace(9999.99, np.NaN)
             dfs.append(df)
         except:
@@ -749,8 +756,8 @@ def annual_std_anom(data_file, clim_years=[1991, 2020], anom_months = [5,6,7,8,9
                                             (df_clim_period.index.month)]).mean().squeeze()
 
     # Calculate monthly clim
-    df_monthly_clim = df_clim_stack.mean(level=1)
-    df_monthly_std = df_clim_stack.std(level=1)
+    df_monthly_clim = df_clim_stack.unstack().mean()
+    df_monthly_std = df_clim_stack.unstack().std()
 
     # Calculate monthly anomalies
     monthly_anom = df_unstack - df_monthly_clim 
