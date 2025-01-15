@@ -46,19 +46,19 @@ import hl_modules as hl
 
 ## ---- Input params to be put in function ---- ##
 site = 'Arnolds_Cove'; site_tmp = 'Arnold'
-#site = 'Bristols_Hope'; site_tmp = 'Bristol'
-#site = 'Comfort_Cove'; site_tmp = 'Comfort'
-#site = 'Hampden'; site_tmp = 'Hampden'
-#site = 'Lumsden_5m'; site_tmp = 'Lumsden.*\ 5m'
-#site = 'Lumsden_15m'; site_tmp = 'Lumsden.*15m'
-#site = 'Melrose_5m'; site_tmp = 'Melrose.*\ 5m'
-#site = 'Melrose_15m'; site_tmp = 'Melrose.*15m'
-#site = 'Old_Bonaventure'; site_tmp = 'Bonaventure'
-#site = 'Stock_Cove'; site_tmp = 'Stock'
-#site = 'Upper_Gullies'; site_tmp = 'Foxtrap'
-#site = 'Winterton'; site_tmp = 'Winterton'
+## site = 'Bristols_Hope'; site_tmp = 'Bristol'
+## site = 'Comfort_Cove'; site_tmp = 'Comfort'
+## site = 'Hampden'; site_tmp = 'Hampden'
+## site = 'Lumsden_5m'; site_tmp = 'Lumsden.*\ 5m'
+## site = 'Lumsden_15m'; site_tmp = 'Lumsden.*15m'
+## site = 'Melrose_5m'; site_tmp = 'Melrose.*\ 5m'
+## site = 'Melrose_15m'; site_tmp = 'Melrose.*15m'
+## site = 'Old_Bonaventure'; site_tmp = 'Bonaventure'
+## site = 'Stock_Cove'; site_tmp = 'Stock'
+## site = 'Upper_Gullies'; site_tmp = 'Foxtrap'
+## site = 'Winterton'; site_tmp = 'Winterton'
 
-years_to_append = [2019, 2020, 2021, 2022, 2023] 
+years_to_append = [2019, 2020, 2021, 2022, 2023, 2024] 
 
 
 ## ---- Read .rpf files + clean ---- #
