@@ -8,8 +8,10 @@ At the time of writing this script,
 Ryan.Doody@dfo-mpo.gc.ca was responsible for the Headlands program
 and
 Charlie.Bishop@dfo-mpo.gc.ca generated historical archive.
-
-This script was largely written by Giulia Bronzi in June-August 2020
+Also:
+Giulia Bronzi has been working on this during a summer intership (June-August 2020)
+and
+Jonathan.Coyne@dfo-mpo.gc.ca will take over the annual data processing in 2025.
 
 
 Frederic.Cyr@dfo-mpo.gc.ca
@@ -21,47 +23,13 @@ January/February 2022
 import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
-## import datetime
-## import os
-## import xarray
-## import copy
-## import seaborn as sns
-## from datetime import date
-## from scipy.stats import linregress
-## from dateutil.relativedelta import relativedelta
 
 import xarray as xr
 import hl_modules as hl  
 import os 
-## ## Input params to be put in function
-## site = 'Arnolds_Cove'; path_name=None
-## site = 'Bristols_Hope'; path_name=None
-## site = 'ComfortCove'; path_name=None
-## site = 'Hampden'; path_name=None
-## site = 'Lumsden'; path_name='/5m'
-## site = 'Lumsden'; path_name='/15m'
-## site = 'Melrose'; path_name='/5m'
-## site = 'Melrose'; path_name='/15m'
-## site = 'OldBonaventure'; path_name=None
-## site = 'StockCove'; path_name=None
-## site = 'UpperGullies'; path_name=None
-## site = 'Winterton'; path_name=None
-## ## 
-## filelist = hl.getFileList(site, path_name=path_name)
-
-## # Read .rpf files
-## filelist = hl.getFileList('Arnolds_Cove')
-## df_all = hl.readrpf(filelist)
-
-## Quick plot:
-#ds = xr.open_dataset('Arnolds_Cove.nc')   
-#df = ds.temperature.to_pandas()
-#df.plot()
 
 ## Some parameters
-YEAR = 2023
-
-
+YEAR = 2024
 
 ## Annual daily plot with climatology:
 hl.plotClimatology('Arnolds_Cove.nc', YEAR, siteName="Arnold's Cove", method = 'doy', XLIM=[100,350])
